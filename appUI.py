@@ -12,7 +12,7 @@ def interpolate_color(color1, color2, t):
     return f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}"
 
 class Object:
-    def __init__(self, canvas, x, y):
+    def __init__(self, canvas, x, y, logo, title):
         self.canvas = canvas
         self.x = x
         self.y = y
@@ -42,11 +42,11 @@ class Object:
         
         self.logo = canvas.create_image(self.x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.4,
                                        self.y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.4 + MARGIN / 2,
-                                       image=image)
+                                       image=logo)
         self.title = canvas.create_text(
             x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.3 + MARGIN *4/3,
             y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.4 + MARGIN / 2,
-            text="App",
+            text=title,
             fill="#ffffff",
             font=("Consolas", 16)
         )
@@ -106,11 +106,21 @@ def add_exe(conn, canvas, objects):
     file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
     if file_path:
         name = file_path.split("/")[-1].split(".exe")[0]
-        icon_data = extract_highres_icon_from_exe(file_path)
-        add_application(conn, name, file_path, icon_data)
+        icon = extract_highres_icon_from_exe(file_path)
+        if icon is None:
+            print(f"[WARN] Impossible d’extraire une icône depuis {file_path}")
+            return
+
+        icon.load()
+        icon = icon.convert("RGBA")
+
+        size = int(WIDTH / AMOUNT_PER_LINE * 0.15)
+        icon = icon.resize((size, size), Image.LANCZOS)
+
+        #add_application(conn, name, file_path, icon_data)
 
         i = len(objects)
-        obj = Object(canvas, (i % AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), (i // AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE))
+        obj = Object(canvas, (i % AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), (i // AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), icon, name)
         objects.append(obj)
 
 conn = connect_db('apps.db')
@@ -121,7 +131,7 @@ root = Tk()
 WIDTH = root.winfo_screenwidth()
 HEIGHT = root.winfo_screenheight()
 MARGIN = WIDTH / 20
-AMOUNT_PER_LINE = 3
+AMOUNT_PER_LINE = 5
 root.attributes("-fullscreen", True)
 root.title("Simple GUI")
 
@@ -139,9 +149,13 @@ image = Image.open("gcfw-icon-128x128tr.png")
 image = image.resize((int(WIDTH / AMOUNT_PER_LINE *0.15), int(WIDTH / AMOUNT_PER_LINE *0.15)))
 image = ImageTk.PhotoImage(image)
 
+"""
 apps = get_applications(conn)
 for i, app in enumerate(apps):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE)))
+"""
+for i in range(10):
+    objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), image, "App"))
 
 root.mainloop()
 

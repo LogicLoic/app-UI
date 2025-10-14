@@ -1,63 +1,47 @@
 #Credits to ChatGPT
 
+import io
 import pefile
-from io import BytesIO
 from PIL import Image
 
-def extract_highres_icon_from_exe(exe_path, out_path=None):
-    pe = pefile.PE(exe_path)
-    resources = []
-    group_icons = []
+def extract_highres_icon_from_exe(exe_path):
+    try:
+        pe = pefile.PE(exe_path)
 
-    if not hasattr(pe, 'DIRECTORY_ENTRY_RESOURCE'):
-        raise RuntimeError("Aucune ressource trouvée dans le fichier.")
+        if not hasattr(pe, "DIRECTORY_ENTRY_RESOURCE"):
+            print(f"[WARN] {exe_path} n’a pas de ressources.")
+            return None
 
-    for resource_type in pe.DIRECTORY_ENTRY_RESOURCE.entries:
-        if resource_type.name is not None:
-            name = str(resource_type.name)
-        else:
-            name = pefile.RESOURCE_TYPE.get(resource_type.struct.Id, str(resource_type.struct.Id))
+        icon_groups = []
+        for entry in pe.DIRECTORY_ENTRY_RESOURCE.entries:
+            if entry.name is not None and str(entry.name) == "ICON":
+                icon_groups.append(entry)
+            elif hasattr(entry, "id") and entry.id == pefile.RESOURCE_TYPE["RT_ICON"]:
+                icon_groups.append(entry)
 
-        if name == "RT_GROUP_ICON":
-            for entry in resource_type.directory.entries:
+        if not icon_groups:
+            print(f"[WARN] Aucune icône trouvée dans {exe_path}.")
+            return None
+
+        # Récupère toutes les icônes et prend la plus grande
+        icon_data = []
+        for group in icon_groups:
+            for entry in group.directory.entries:
                 data_rva = entry.directory.entries[0].data.struct.OffsetToData
                 size = entry.directory.entries[0].data.struct.Size
                 data = pe.get_memory_mapped_image()[data_rva:data_rva + size]
-                group_icons.append(data)
+                icon_data.append(data)
 
-        elif name == "RT_ICON":
-            for entry in resource_type.directory.entries:
-                data_rva = entry.directory.entries[0].data.struct.OffsetToData
-                size = entry.directory.entries[0].data.struct.Size
-                data = pe.get_memory_mapped_image()[data_rva:data_rva + size]
-                resources.append(data)
+        if not icon_data:
+            print(f"[WARN] Ressources d’icône vides dans {exe_path}.")
+            return None
 
-    if not group_icons or not resources:
-        raise RuntimeError("Aucune icône trouvée dans ce .exe")
+        # Construit une image PIL à partir de la plus grande icône trouvée
+        largest = max(icon_data, key=len)
+        ico = io.BytesIO(largest)
+        img = Image.open(ico)
+        return img
 
-    group_data = group_icons[0]
-    reserved, res_type, count = int.from_bytes(group_data[:2], 'little'), int.from_bytes(group_data[2:4], 'little'), int.from_bytes(group_data[4:6], 'little')
-    ico_header = group_data[:6]
-    entries = []
-
-    for i in range(count):
-        entry = bytearray(group_data[6 + i * 14:6 + (i + 1) * 14])
-        idx = int.from_bytes(group_data[6 + i * 14 + 12:6 + i * 14 + 14], 'little') - 1
-        img_data = resources[idx]
-        entry[12:16] = len(img_data).to_bytes(4, 'little')
-        entries.append((bytes(entry), img_data))
-
-    ico_data = bytearray(ico_header)
-    offset = 6 + len(entries) * 16
-    for entry, img_data in entries:
-        ico_data += entry[:12] + offset.to_bytes(4, 'little')
-        offset += len(img_data)
-    for entry, img_data in entries:
-        ico_data += img_data
-
-    image = Image.open(BytesIO(ico_data))
-
-    if out_path:
-        image.save(out_path)
-    return image
-
+    except Exception as e:
+        print(f"[ERROR] Extraction échouée pour {exe_path}: {e}")
+        return None
