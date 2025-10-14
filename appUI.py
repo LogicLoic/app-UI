@@ -1,5 +1,9 @@
 from tkinter import *
 from math import *
+from PIL import Image, ImageTk
+from IconLoader import extract_highres_icon_from_exe
+from tkinter import filedialog
+from appDB import *
 
 def interpolate_color(color1, color2, t):
     c1 = [int(color1[i:i+2], 16) for i in (1, 3, 5)]
@@ -21,8 +25,8 @@ class Object:
         )
 
         self.zoomed_coords = (
-            x * WIDTH + (MARGIN / 2),
-            y * HEIGHT + (MARGIN / 2),
+            x * WIDTH + (MARGIN / 1.5),
+            y * HEIGHT + (MARGIN / 1.5),
             x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.92,
             y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.92
         )
@@ -36,12 +40,24 @@ class Object:
                                            fill=self.base_fill,
                                            outline=self.base_outline, width=2)
         
+        self.logo = canvas.create_image(self.x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.4,
+                                       self.y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.4 + MARGIN / 2,
+                                       image=image)
+        self.title = canvas.create_text(
+            x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.3 + MARGIN *4/3,
+            y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.4 + MARGIN / 2,
+            text="App",
+            fill="#ffffff",
+            font=("Consolas", 16)
+        )
+
         self.zoom = 0.0
         self.target_zoom = 0.0
         self.animation_id = None
 
-        canvas.tag_bind(self.box, "<Enter>", self.on_enter)
-        canvas.tag_bind(self.box, "<Leave>", self.on_leave)
+        for tag in (self.box, self.logo, self.title):
+            canvas.tag_bind(tag, "<Enter>", self.on_enter)
+            canvas.tag_bind(tag, "<Leave>", self.on_leave)
 
     def on_enter(self, event):
         self.animate_to(1.0, duration=1000)
@@ -86,14 +102,26 @@ class Object:
 
         step()
 
+def add_exe(conn, canvas, objects):
+    file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
+    if file_path:
+        name = file_path.split("/")[-1].split(".exe")[0]
+        icon_data = extract_highres_icon_from_exe(file_path)
+        add_application(conn, name, file_path, icon_data)
+
+        i = len(objects)
+        obj = Object(canvas, (i % AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), (i // AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE))
+        objects.append(obj)
+
+conn = connect_db('apps.db')
+create_table(conn)
 
 root = Tk()
 
 WIDTH = root.winfo_screenwidth()
 HEIGHT = root.winfo_screenheight()
 MARGIN = WIDTH / 20
-AMOUNT_PER_LINE = 4
-
+AMOUNT_PER_LINE = 3
 root.attributes("-fullscreen", True)
 root.title("Simple GUI")
 
@@ -103,10 +131,18 @@ canvas.pack(fill=BOTH, expand=True)
 button = Button(root, text="Exit", command=lambda: exit())
 button.place(relx=0.5, rely=0.5)
 
-objects = []
+button = Button(root, text="Add Executable", command=lambda: add_exe(conn, canvas, objects))
+button.place(relx=0.9, rely=0.1)
 
-for i in range(30):
+objects = []
+image = Image.open("gcfw-icon-128x128tr.png")
+image = image.resize((int(WIDTH / AMOUNT_PER_LINE *0.15), int(WIDTH / AMOUNT_PER_LINE *0.15)))
+image = ImageTk.PhotoImage(image)
+
+apps = get_applications(conn)
+for i, app in enumerate(apps):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE)))
 
-
 root.mainloop()
+
+close_db(conn)
