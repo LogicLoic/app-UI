@@ -1,9 +1,10 @@
 from tkinter import *
 from math import *
 from PIL import Image, ImageTk
-from IconLoader import extract_highres_icon_from_exe
+#from IconLoader import extract_highres_icon_from_exe
 from tkinter import filedialog
 from appDB import *
+from settings import open_settings
 
 def interpolate_color(color1, color2, t):
     c1 = [int(color1[i:i+2], 16) for i in (1, 3, 5)]
@@ -35,10 +36,11 @@ class Object:
         self.zoomed_fill = "#44aaff"
         self.base_outline = "#0088ff"
         self.zoomed_outline = "#aaddff"
+        self.thickness = 2
 
         self.box = canvas.create_rectangle(*self.base_coords,
                                            fill=self.base_fill,
-                                           outline=self.base_outline, width=2)
+                                           outline=self.base_outline, width=self.thickness)
         
         self.logo = canvas.create_image(self.x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.4,
                                        self.y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.4 + MARGIN / 2,
@@ -102,6 +104,20 @@ class Object:
 
         step()
 
+def apply_settings(new_settings):
+    global settings
+    settings = new_settings
+    canvas.config(bg=settings[0])
+    for obj in objects:
+        obj.base_fill = settings[1]
+        obj.zoomed_fill = settings[2]
+        obj.base_outline = settings[3]
+        obj.zoomed_outline = settings[4]
+        obj.thickness = settings[5]
+        obj.canvas.itemconfig(obj.box, width=obj.thickness)
+        obj.canvas.itemconfig(obj.title, font=(settings[6], settings[7]), fill=settings[8])
+
+"""
 def add_exe(conn, canvas, objects):
     file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
     if file_path:
@@ -122,7 +138,7 @@ def add_exe(conn, canvas, objects):
         i = len(objects)
         obj = Object(canvas, (i % AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), (i // AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), icon, name)
         objects.append(obj)
-
+"""
 conn = connect_db('apps.db')
 create_table(conn)
 
@@ -131,30 +147,48 @@ root = Tk()
 WIDTH = root.winfo_screenwidth()
 HEIGHT = root.winfo_screenheight()
 MARGIN = WIDTH / 20
-AMOUNT_PER_LINE = 5
+AMOUNT_PER_LINE = 6
 root.attributes("-fullscreen", True)
-root.title("Simple GUI")
+root.title("App catalog")
 
 canvas = Canvas(root, bg="#002244")
 canvas.pack(fill=BOTH, expand=True)
 
-button = Button(root, text="Exit", command=lambda: exit())
-button.place(relx=0.5, rely=0.5)
+button1 = Button(root, text="Exit", command=lambda: exit())
+button1.place(relx=0.5, rely=0.5)
 
-button = Button(root, text="Add Executable", command=lambda: add_exe(conn, canvas, objects))
-button.place(relx=0.9, rely=0.1)
+button2 = Button(root, text="Add Executable", command=lambda: add_exe(conn, canvas, objects))
+button2.place(relx=0.9, rely=0.1)
+
+button3 = Button(root, text="Settings", command=lambda: (open_settings(settings), apply_settings(settings)))
+button3.place(relx=0.8, rely=0.1)
 
 objects = []
 image = Image.open("gcfw-icon-128x128tr.png")
 image = image.resize((int(WIDTH / AMOUNT_PER_LINE *0.15), int(WIDTH / AMOUNT_PER_LINE *0.15)))
 image = ImageTk.PhotoImage(image)
 
+settings = [
+    "#002244", #background color
+    #Box settings
+    "#0066bb", #base_fill
+    "#44aaff", #zoomed_fill
+    "#0088ff", #base_outline
+    "#aaddff", #zoomed_outline
+    2, #thickness
+    
+    #Font settings
+    "Consolas", #font family
+    16, #font size
+    "#ffffff" #font color
+]
+
 """
 apps = get_applications(conn)
 for i, app in enumerate(apps):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE)))
 """
-for i in range(10):
+for i in range(20):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), image, "App"))
 
 root.mainloop()
