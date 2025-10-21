@@ -8,13 +8,29 @@ def choose_color():
         return color_code[1]
     return "#000000"
 
-def open_settings(settings):
+def apply_settings(new_settings, canvas, objects):
+    global settings
+    settings = new_settings
+    canvas.config(bg=settings[0])
+    for obj in objects:
+        obj.base_fill = settings[1]
+        obj.zoomed_fill = settings[2]
+        obj.base_outline = settings[3]
+        obj.zoomed_outline = settings[4]
+        obj.thickness = settings[5]
+        obj.canvas.itemconfig(obj.box, width=obj.thickness, fill = obj.base_fill, outline = obj.base_outline)
+        obj.canvas.itemconfig(obj.title, font=(settings[6], settings[7]), fill=settings[8])
+
+def open_settings(canvas, objects):
     def save_and_close():
-        with open("settings.txt", "w") as f:
-            for item in new_settings:
+        with open("settings.set", "w") as f:
+            for item in settings:
                 f.write(f"{item}\n")
         window.destroy()
-        return new_settings
+        apply_settings(new_settings, canvas, objects)
+
+    with open("settings.set", "r") as f:
+        settings = [line.strip() for line in f.readlines()]
 
     window = Tk()
     window.title("Settings")

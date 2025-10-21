@@ -1,10 +1,10 @@
 from tkinter import *
 from math import *
 from PIL import Image, ImageTk
-#from IconLoader import extract_highres_icon_from_exe
+from IconLoader import extract_highres_icon_from_exe
 from tkinter import filedialog
 from appDB import *
-from settings import open_settings
+from settings import open_settings, apply_settings
 
 def interpolate_color(color1, color2, t):
     c1 = [int(color1[i:i+2], 16) for i in (1, 3, 5)]
@@ -104,20 +104,6 @@ class Object:
 
         step()
 
-def apply_settings(new_settings):
-    global settings
-    settings = new_settings
-    canvas.config(bg=settings[0])
-    for obj in objects:
-        obj.base_fill = settings[1]
-        obj.zoomed_fill = settings[2]
-        obj.base_outline = settings[3]
-        obj.zoomed_outline = settings[4]
-        obj.thickness = settings[5]
-        obj.canvas.itemconfig(obj.box, width=obj.thickness)
-        obj.canvas.itemconfig(obj.title, font=(settings[6], settings[7]), fill=settings[8])
-
-"""
 def add_exe(conn, canvas, objects):
     file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
     if file_path:
@@ -138,7 +124,7 @@ def add_exe(conn, canvas, objects):
         i = len(objects)
         obj = Object(canvas, (i % AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), (i // AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), icon, name)
         objects.append(obj)
-"""
+
 conn = connect_db('apps.db')
 create_table(conn)
 
@@ -160,7 +146,7 @@ button1.place(relx=0.5, rely=0.5)
 button2 = Button(root, text="Add Executable", command=lambda: add_exe(conn, canvas, objects))
 button2.place(relx=0.9, rely=0.1)
 
-button3 = Button(root, text="Settings", command=lambda: (open_settings(settings), apply_settings(settings)))
+button3 = Button(root, text="Settings", command=lambda: open_settings(canvas, objects))
 button3.place(relx=0.8, rely=0.1)
 
 objects = []
@@ -168,20 +154,9 @@ image = Image.open("gcfw-icon-128x128tr.png")
 image = image.resize((int(WIDTH / AMOUNT_PER_LINE *0.15), int(WIDTH / AMOUNT_PER_LINE *0.15)))
 image = ImageTk.PhotoImage(image)
 
-settings = [
-    "#002244", #background color
-    #Box settings
-    "#0066bb", #base_fill
-    "#44aaff", #zoomed_fill
-    "#0088ff", #base_outline
-    "#aaddff", #zoomed_outline
-    2, #thickness
-    
-    #Font settings
-    "Consolas", #font family
-    16, #font size
-    "#ffffff" #font color
-]
+settings = []
+with open("settings.set", "r") as f:
+    settings = [line.strip() for line in f.readlines()]
 
 """
 apps = get_applications(conn)
@@ -190,6 +165,8 @@ for i, app in enumerate(apps):
 """
 for i in range(20):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), image, "App"))
+
+apply_settings(settings, canvas, objects)
 
 root.mainloop()
 
