@@ -125,6 +125,150 @@ def add_exe(conn, canvas, objects):
         obj = Object(canvas, (i % AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), (i // AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), icon, name)
         objects.append(obj)
 
+scroll_offset = 0
+scroll_target = 0
+scroll_animation = None
+
+def on_scroll(event):
+    """Gère la molette et déclenche le défilement fluide."""
+    global scroll_target
+
+    # Sens du scroll
+    direction = -1 if event.delta > 0 else 1
+    step = HEIGHT / 10  # Distance à parcourir par "cran"
+    scroll_target += direction * step
+    scroll_target = max(min(scroll_target, HEIGHT), -HEIGHT * 3)  # limites
+
+    animate_scroll()
+
+def animate_scroll(duration=400, fps=60):
+    """Anime le déplacement fluide des objets sur le canvas."""
+    global scroll_offset, scroll_target, scroll_animation
+
+    if scroll_animation:
+        root.after_cancel(scroll_animation)
+
+    frames = int(duration / (1000 / fps))
+    start = scroll_offset
+    delta = scroll_target - start
+
+    def step(i=0):
+        global scroll_offset, scroll_animation
+        t = i / frames
+        eased_t = 1 - exp(-6 * t)
+        eased_t /= 1 - exp(-6)
+        new_offset = start + delta * eased_t
+        dy = new_offset - scroll_offset
+        scroll_offset = new_offset
+
+        # Déplace tout le contenu
+        for obj in objects:
+            canvas.move(obj.box, 0, dy)
+            canvas.move(obj.logo, 0, dy)
+            canvas.move(obj.title, 0, dy)
+
+            # Met à jour les coordonnées internes logiques
+            obj.y += dy / HEIGHT  # proportionnel à la taille de l’écran
+
+            # Tu peux aussi recalculer base_coords & zoomed_coords si tu veux
+            obj.base_coords = tuple(
+                c + (dy / HEIGHT) * HEIGHT if j % 2 == 1 else c
+                for j, c in enumerate(obj.base_coords)
+            )
+            obj.zoomed_coords = tuple(
+                c + (dy / HEIGHT) * HEIGHT if j % 2 == 1 else c
+                for j, c in enumerate(obj.zoomed_coords)
+            )
+
+        if i < frames:
+            scroll_animation = root.after(int(1000 / fps), step, i + 1)
+        else:
+            scroll_animation = None
+
+    step()
+    
+zoom_level = 1.0
+target_zoom = 1.0
+zoom_anim = None
+
+def on_ctrl_scroll(event):
+    """Ctrl + molette => zoom fluide de la grille"""
+    global target_zoom
+
+    # direction molette (Windows : delta multiple de 120)
+    direction = 1 if event.delta > 0 else -1
+    target_zoom *= 1.1 if direction > 0 else 0.9
+    target_zoom = max(0.5, min(2.0, target_zoom))  # limites
+
+    start_zoom_animation()
+
+def start_zoom_animation(duration=400, fps=60):
+    """Anime le zoom global en interpolant toutes les positions"""
+    global zoom_level, target_zoom, zoom_anim, AMOUNT_PER_LINE
+
+    if zoom_anim:
+        root.after_cancel(zoom_anim)
+
+    frames = int(duration / (1000 / fps))
+    start_zoom = zoom_level
+    delta = target_zoom - start_zoom
+
+    def step(i=0):
+        global zoom_level, zoom_anim, AMOUNT_PER_LINE
+
+        t = i / frames
+        eased_t = 1 - exp(-6 * t)
+        eased_t /= 1 - exp(-6)
+
+        zoom_level = start_zoom + delta * eased_t
+        AMOUNT_PER_LINE = int(6 / zoom_level)
+        AMOUNT_PER_LINE = max(2, min(10, AMOUNT_PER_LINE))
+
+        box_w = WIDTH / AMOUNT_PER_LINE
+        box_h = HEIGHT / AMOUNT_PER_LINE
+
+        for idx, obj in enumerate(objects):
+            target_x = (idx % AMOUNT_PER_LINE) / AMOUNT_PER_LINE
+            target_y = (idx // AMOUNT_PER_LINE) / AMOUNT_PER_LINE
+
+            # interpolation fluide vers nouvelle position
+            obj.x += (target_x - obj.x) * 0.3
+            obj.y += (target_y - obj.y) * 0.3
+
+            # mise à jour des coordonnées
+            obj.base_coords = (
+                obj.x * WIDTH + MARGIN,
+                obj.y * HEIGHT + MARGIN,
+                obj.x * WIDTH + box_w * 0.8,
+                obj.y * HEIGHT + box_h * 0.8
+            )
+            obj.zoomed_coords = (
+                obj.x * WIDTH + (MARGIN / 1.5),
+                obj.y * HEIGHT + (MARGIN / 1.5),
+                obj.x * WIDTH + box_w * 0.92,
+                obj.y * HEIGHT + box_h * 0.92
+            )
+
+            # repositionnement
+            x1, y1, x2, y2 = obj.base_coords
+            obj.canvas.coords(obj.box, x1, y1, x2, y2)
+            obj.canvas.coords(obj.logo,
+                obj.x * WIDTH + box_w * 0.4,
+                obj.y * HEIGHT + box_h * 0.4 + MARGIN / 2
+            )
+            obj.canvas.coords(obj.title,
+                obj.x * WIDTH + box_w * 0.3 + MARGIN * 4/3,
+                obj.y * HEIGHT + box_h * 0.4 + MARGIN / 2
+            )
+
+        if i < frames:
+            zoom_anim = root.after(int(1000 / fps), step, i + 1)
+        else:
+            zoom_level = target_zoom
+            zoom_anim = None
+
+    step()
+
 conn = connect_db('apps.db')
 create_table(conn)
 
@@ -163,11 +307,17 @@ apps = get_applications(conn)
 for i, app in enumerate(apps):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE)))
 """
-for i in range(20):
-    objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), image, "App"))
+for i in range(100):
+    objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), image, str(i)))
 
 apply_settings(settings, canvas, objects)
 
+canvas.bind("<MouseWheel>", on_scroll) #Windows
+canvas.bind_all("<Control-MouseWheel>", on_ctrl_scroll)
+canvas.bind_all("<Button-4>", lambda e: on_scroll(type("Event", (), {"delta": -120})))  # Linux (scroll up)
+canvas.bind_all("<Button-5>", lambda e: on_scroll(type("Event", (), {"delta": 120}))) # Linux (scroll down)
+canvas.bind_all("<Control-Button-4>", lambda e: on_ctrl_scroll(type("Event", (), {"delta": 120})))  # Linux up
+canvas.bind_all("<Control-Button-5>", lambda e: on_ctrl_scroll(type("Event", (), {"delta": -120}))) # Linux down
 root.mainloop()
 
 close_db(conn)
