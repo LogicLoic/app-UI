@@ -1,47 +1,49 @@
-#Credits to ChatGPT
+#Credits/Source : https://github.com/techartorg/TAO-Wiki/wiki/%5BPython%5D-Py3-Extract-icon-from-exe-and-save-as-png-(with-alpha)
 
-import io
-import pefile
-from PIL import Image
+def extract_icon_from_exe(icon_in_path, icon_name, icon_out_path, out_width = 56, out_height = 56):
 
-def extract_highres_icon_from_exe(exe_path):
-    try:
-        pe = pefile.PE(exe_path)
+    """Given an icon path (exe file) extract it and output at the desired width/height as a png image.
+    
+    Args:
+        icon_in_path (string): path to the exe to extract the icon from
+        icon_name (string): name of the icon so we can save it out with the correct name
+        icon_out_path (string): final destination (FOLDER) - Gets combined with icon_name for full icon_path
+        out_width (int, optional): desired icon width
+        out_height (int, optional): desired icon height
+    
+    Returns:
+        string: path to the final icon
+    """
+    import win32ui
+    import win32gui
+    import win32con
+    import win32api
+    import os
+    from PIL import Image
 
-        if not hasattr(pe, "DIRECTORY_ENTRY_RESOURCE"):
-            print(f"[WARN] {exe_path} n’a pas de ressources.")
-            return None
+    ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
+    ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
 
-        icon_groups = []
-        for entry in pe.DIRECTORY_ENTRY_RESOURCE.entries:
-            if entry.name is not None and str(entry.name) == "ICON":
-                icon_groups.append(entry)
-            elif hasattr(entry, "id") and entry.id == pefile.RESOURCE_TYPE["RT_ICON"]:
-                icon_groups.append(entry)
+    large, small = win32gui.ExtractIconEx(icon_in_path,0)
+    win32gui.DestroyIcon(small[0])
 
-        if not icon_groups:
-            print(f"[WARN] Aucune icône trouvée dans {exe_path}.")
-            return None
+    hdc = win32ui.CreateDCFromHandle( win32gui.GetDC(0) )
+    hbmp = win32ui.CreateBitmap()
+    hbmp.CreateCompatibleBitmap( hdc, ico_x, ico_x )
+    hdc = hdc.CreateCompatibleDC()
 
-        # Récupère toutes les icônes et prend la plus grande
-        icon_data = []
-        for group in icon_groups:
-            for entry in group.directory.entries:
-                data_rva = entry.directory.entries[0].data.struct.OffsetToData
-                size = entry.directory.entries[0].data.struct.Size
-                data = pe.get_memory_mapped_image()[data_rva:data_rva + size]
-                icon_data.append(data)
+    hdc.SelectObject( hbmp )
+    hdc.DrawIcon( (0,0), large[0] )
 
-        if not icon_data:
-            print(f"[WARN] Ressources d’icône vides dans {exe_path}.")
-            return None
+    bmpstr = hbmp.GetBitmapBits(True)
+    icon = Image.frombuffer(
+        'RGBA',
+        (32,32),
+        bmpstr, 'raw', 'BGRA', 0, 1
+    )
 
-        # Construit une image PIL à partir de la plus grande icône trouvée
-        largest = max(icon_data, key=len)
-        ico = io.BytesIO(largest)
-        img = Image.open(ico)
-        return img
-
-    except Exception as e:
-        print(f"[ERROR] Extraction échouée pour {exe_path}: {e}")
-        return None
+    full_outpath = os.path.join(icon_out_path, "{}.png".format(icon_name))
+    icon.resize((out_width, out_height))
+    icon.save(full_outpath)
+    #return the final path to the image
+    return full_outpath

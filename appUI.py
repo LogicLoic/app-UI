@@ -1,7 +1,7 @@
 from tkinter import *
 from math import *
 from PIL import Image, ImageTk
-from IconLoader import extract_highres_icon_from_exe
+from IconLoader import extract_icon_from_exe as extract
 from tkinter import filedialog
 from appDB import *
 from settings import open_settings, apply_settings
@@ -108,21 +108,22 @@ def add_exe(conn, canvas, objects):
     file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
     if file_path:
         name = file_path.split("/")[-1].split(".exe")[0]
-        icon = extract_highres_icon_from_exe(file_path)
-        if icon is None:
+        path = extract(file_path, name, ".", out_width=128, out_height=128)
+        if path is None:
             print(f"[WARN] Impossible d’extraire une icône depuis {file_path}")
             return
 
-        icon.load()
-        icon = icon.convert("RGBA")
+        icon = Image.open(path)
 
         size = int(WIDTH / AMOUNT_PER_LINE * 0.15)
-        icon = icon.resize((size, size), Image.LANCZOS)
+        icon = icon.resize((size, size))
+        icon = ImageTk.PhotoImage(icon)
 
         #add_application(conn, name, file_path, icon_data)
 
         i = len(objects)
         obj = Object(canvas, (i % AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), (i // AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), icon, name)
+        obj.iconref = icon
         objects.append(obj)
 
 scroll_offset = 0
@@ -134,11 +135,10 @@ def on_scroll(event):
     global scroll_target
 
     # Sens du scroll
-    direction = -1 if event.delta > 0 else 1
+    direction = 1 if event.delta > 0 else -1
     step = HEIGHT / 10  # Distance à parcourir par "cran"
     scroll_target += direction * step
-    scroll_target = max(min(scroll_target, HEIGHT), -HEIGHT * 3)  # limites
-
+    
     animate_scroll()
 
 def animate_scroll(duration=400, fps=60):
@@ -314,8 +314,8 @@ apply_settings(settings, canvas, objects)
 
 canvas.bind("<MouseWheel>", on_scroll) #Windows
 canvas.bind_all("<Control-MouseWheel>", on_ctrl_scroll)
-canvas.bind_all("<Button-4>", lambda e: on_scroll(type("Event", (), {"delta": -120})))  # Linux (scroll up)
-canvas.bind_all("<Button-5>", lambda e: on_scroll(type("Event", (), {"delta": 120}))) # Linux (scroll down)
+canvas.bind_all("<Button-4>", lambda e: on_scroll(type("Event", (), {"delta": 120})))  # Linux (scroll up)
+canvas.bind_all("<Button-5>", lambda e: on_scroll(type("Event", (), {"delta": -120}))) # Linux (scroll down)
 canvas.bind_all("<Control-Button-4>", lambda e: on_ctrl_scroll(type("Event", (), {"delta": 120})))  # Linux up
 canvas.bind_all("<Control-Button-5>", lambda e: on_ctrl_scroll(type("Event", (), {"delta": -120}))) # Linux down
 root.mainloop()
