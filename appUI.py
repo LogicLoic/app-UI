@@ -5,6 +5,7 @@ from IconLoader import extract_icon_from_exe as extract
 from tkinter import filedialog
 from appDB import *
 from settings import open_settings, apply_settings
+from os import system
 
 def interpolate_color(color1, color2, t):
     c1 = [int(color1[i:i+2], 16) for i in (1, 3, 5)]
@@ -45,6 +46,7 @@ class Object:
         self.logo = canvas.create_image(self.x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.4,
                                        self.y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.4 + MARGIN / 2,
                                        image=logo)
+        self.icon = logo
         self.title = canvas.create_text(
             x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.3 + MARGIN *4/3,
             y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.4 + MARGIN / 2,
@@ -60,6 +62,7 @@ class Object:
         for tag in (self.box, self.logo, self.title):
             canvas.tag_bind(tag, "<Enter>", self.on_enter)
             canvas.tag_bind(tag, "<Leave>", self.on_leave)
+            canvas.tag_bind(tag, "<Button-1>", lambda e, t=title: run(t))
 
     def on_enter(self, event):
         self.animate_to(1.0, duration=1000)
@@ -104,6 +107,11 @@ class Object:
 
         step()
 
+def run(app_name):
+    path = get_path(conn, app_name)
+    if path:
+        system(f'start "" "{path}"')
+
 def add_exe(conn, canvas, objects):
     file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
     if file_path:
@@ -113,18 +121,15 @@ def add_exe(conn, canvas, objects):
             print(f"[WARN] Impossible d’extraire une icône depuis {file_path}")
             return
 
-        icon = Image.open(path)
+        icon = Image.open(path).resize((int(WIDTH / AMOUNT_PER_LINE * 0.15),
+                                   int(WIDTH / AMOUNT_PER_LINE * 0.15)))
 
-        size = int(WIDTH / AMOUNT_PER_LINE * 0.15)
-        icon = icon.resize((size, size))
-        icon = ImageTk.PhotoImage(icon)
+        add_application(conn, name, file_path, icon)
 
-        #add_application(conn, name, file_path, icon_data)
+        icon_tk = ImageTk.PhotoImage(icon)
 
         i = len(objects)
-        obj = Object(canvas, (i % AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), (i // AMOUNT_PER_LINE) * (1 / AMOUNT_PER_LINE), icon, name)
-        obj.iconref = icon
-        objects.append(obj)
+        objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), icon_tk, name))
 
 scroll_offset = 0
 scroll_target = 0
@@ -302,14 +307,14 @@ settings = []
 with open("settings.set", "r") as f:
     settings = [line.strip() for line in f.readlines()]
 
-"""
+
 apps = get_applications(conn)
 for i, app in enumerate(apps):
-    objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE)))
+    objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), app[2], app[0]))
 """
 for i in range(100):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), image, str(i)))
-
+"""
 apply_settings(settings, canvas, objects)
 
 canvas.bind("<MouseWheel>", on_scroll) #Windows
