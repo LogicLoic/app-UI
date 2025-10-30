@@ -39,20 +39,26 @@ class Object:
         self.zoomed_outline = "#aaddff"
         self.thickness = 2
 
-        self.box = canvas.create_rectangle(*self.base_coords,
-                                           fill=self.base_fill,
-                                           outline=self.base_outline, width=self.thickness)
+        self.box = canvas.create_rectangle(
+            *self.base_coords,
+            fill=self.base_fill,
+            outline=self.base_outline, width=self.thickness)
         
-        self.logo = canvas.create_image(self.x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.4,
-                                       self.y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.4 + MARGIN / 2,
-                                       image=logo)
+        self.logo = canvas.create_image(
+            x * WIDTH + MARGIN + 20,
+            y * HEIGHT + MARGIN + 20,
+            image=logo)
+        
         self.icon = logo
+
         self.title = canvas.create_text(
-            x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.3 + MARGIN *4/3,
-            y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.4 + MARGIN / 2,
+            x * WIDTH + MARGIN + 20 + (WIDTH / AMOUNT_PER_LINE * 0.8) / 2,
+            y * HEIGHT + MARGIN + 40,
             text=title,
             fill="#ffffff",
-            font=("Consolas", 16)
+            font=("Consolas", int(10 * zoom_level)),
+            width=(self.base_coords[2] - self.base_coords[0])*0.9,
+            justify="center"
         )
 
         self.zoom = 0.0
@@ -202,8 +208,8 @@ def on_ctrl_scroll(event):
 
     # direction molette (Windows : delta multiple de 120)
     direction = 1 if event.delta > 0 else -1
-    target_zoom *= 1.1 if direction > 0 else 0.9
-    target_zoom = max(0.5, min(2.0, target_zoom))  # limites
+    target_zoom *= 1.2 if direction > 0 else 0.8
+    target_zoom = max(0.4, min(2.5, target_zoom))  # limites
 
     start_zoom_animation()
 
@@ -244,28 +250,28 @@ def start_zoom_animation(duration=400, fps=60):
             obj.base_coords = (
                 obj.x * WIDTH + MARGIN,
                 obj.y * HEIGHT + MARGIN,
-                obj.x * WIDTH + box_w * 0.8,
-                obj.y * HEIGHT + box_h * 0.8
+                obj.x * WIDTH + box_w * 0.95,
+                obj.y * HEIGHT + box_h * 0.95
             )
             obj.zoomed_coords = (
                 obj.x * WIDTH + (MARGIN / 1.5),
                 obj.y * HEIGHT + (MARGIN / 1.5),
-                obj.x * WIDTH + box_w * 0.92,
-                obj.y * HEIGHT + box_h * 0.92
+                obj.x * WIDTH + box_w * 0.9,
+                obj.y * HEIGHT + box_h * 0.9
             )
 
             # repositionnement
             x1, y1, x2, y2 = obj.base_coords
             obj.canvas.coords(obj.box, x1, y1, x2, y2)
             obj.canvas.coords(obj.logo,
-                obj.x * WIDTH + box_w * 0.4,
-                obj.y * HEIGHT + box_h * 0.4 + MARGIN / 2
+                obj.x * WIDTH + MARGIN + 20,
+                obj.y * HEIGHT + MARGIN + 20,
             )
             obj.canvas.coords(obj.title,
-                obj.x * WIDTH + box_w * 0.3 + MARGIN * 4/3,
-                obj.y * HEIGHT + box_h * 0.4 + MARGIN / 2
+                obj.x * WIDTH + MARGIN + 20 + (WIDTH / AMOUNT_PER_LINE * 0.8) / 2,
+                obj.y * HEIGHT + MARGIN + 20 + (HEIGHT / AMOUNT_PER_LINE * 0.8) / 4,
             )
-
+        obj.canvas.itemconfig(obj.title, font=("Consolas", int(10 * (zoom_level)**0.5)))
         if i < frames:
             zoom_anim = root.after(int(1000 / fps), step, i + 1)
         else:
@@ -281,7 +287,7 @@ root = Tk()
 
 WIDTH = root.winfo_screenwidth()
 HEIGHT = root.winfo_screenheight()
-MARGIN = WIDTH / 20
+MARGIN = WIDTH / 50
 AMOUNT_PER_LINE = 6
 root.attributes("-fullscreen", True)
 root.title("App catalog")
