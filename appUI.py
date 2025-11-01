@@ -5,7 +5,8 @@ from IconLoader import extract_icon_from_exe as extract
 from tkinter import filedialog
 from appDB import *
 from settings import open_settings, apply_settings
-from os import system, remove
+import os
+import subprocess
 
 def interpolate_color(color1, color2, t):
     c1 = [int(color1[i:i+2], 16) for i in (1, 3, 5)]
@@ -22,27 +23,27 @@ class Object:
         self.base_coords = (
             x * WIDTH + MARGIN,
             y * HEIGHT + MARGIN,
-            x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.8,
-            y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.8
+            x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.95,
+            y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.95
         )
 
         self.zoomed_coords = (
-            x * WIDTH + (MARGIN / 1.5),
-            y * HEIGHT + (MARGIN / 1.5),
-            x * WIDTH + WIDTH / AMOUNT_PER_LINE * 0.92,
-            y * HEIGHT + HEIGHT / AMOUNT_PER_LINE * 0.92
+            self.base_coords[0] - (MARGIN * zoom_level/2),
+            self.base_coords[1] - (MARGIN * zoom_level/2),
+            self.base_coords[2] + (MARGIN * zoom_level/2),
+            self.base_coords[3] + (MARGIN * zoom_level/2)
         )
 
         self.base_fill = "#0066bb"
         self.zoomed_fill = "#44aaff"
         self.base_outline = "#0088ff"
         self.zoomed_outline = "#aaddff"
-        self.thickness = 2
+        self.font = "Consolas"
 
         self.box = canvas.create_rectangle(
             *self.base_coords,
             fill=self.base_fill,
-            outline=self.base_outline, width=self.thickness)
+            outline=self.base_outline, width=3)
         
         self.logo = canvas.create_image(
             x * WIDTH + MARGIN + 20,
@@ -52,12 +53,12 @@ class Object:
         self.icon = logo
         
         self.title = canvas.create_text(
-            x * WIDTH + MARGIN + 20 + (WIDTH / AMOUNT_PER_LINE * 0.8) / 2,
-            y * HEIGHT + MARGIN + 40,
+            self.x * WIDTH + MARGIN + (WIDTH / AMOUNT_PER_LINE) / 2.3,
+            self.y * HEIGHT + MARGIN + (HEIGHT / AMOUNT_PER_LINE) / 4.5,
             text=title,
             fill="#ffffff",
-            font=("Consolas", int((self.base_coords[2] - self.base_coords[0])*0.5)),
-            width=(self.base_coords[2] - self.base_coords[0])*0.9,
+            font=("Consolas", int((self.base_coords[2] - self.base_coords[0])*0.07)),
+            width=(self.base_coords[2] - self.base_coords[0])*0.8,
             justify="center"
         )
 
@@ -116,7 +117,8 @@ class Object:
 def run(app_name):
     path = get_path(conn, app_name)
     if path:
-        system(f'start "" "{path}"')
+        working_dir = os.path.dirname(path)
+        subprocess.Popen([path], cwd=working_dir, shell=True)
 
 def add_exe(conn, canvas, objects):
     file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
@@ -129,7 +131,7 @@ def add_exe(conn, canvas, objects):
 
         icon = Image.open(path).resize((int(WIDTH / AMOUNT_PER_LINE * 0.15),
                                    int(WIDTH / AMOUNT_PER_LINE * 0.15)))
-        remove(path)
+        os.remove(path)
         if add_application(conn, name, file_path, icon):
             print(f"[INFO] Application {name} already exists in the database.")
             return
@@ -256,10 +258,10 @@ def start_zoom_animation(duration=400, fps=60):
                 obj.y * HEIGHT + box_h * 0.95
             )
             obj.zoomed_coords = (
-                obj.x * WIDTH + (MARGIN / 1.5),
-                obj.y * HEIGHT + (MARGIN / 1.5),
-                obj.x * WIDTH + box_w * 0.9,
-                obj.y * HEIGHT + box_h * 0.9
+                obj.base_coords[0] - (MARGIN * zoom_level/2),
+                obj.base_coords[1] - (MARGIN * zoom_level/2),
+                obj.base_coords[2] + (MARGIN * zoom_level/2),
+                obj.base_coords[3] + (MARGIN * zoom_level/2)
             )
 
             # repositionnement
@@ -270,10 +272,10 @@ def start_zoom_animation(duration=400, fps=60):
                 obj.y * HEIGHT + MARGIN + (HEIGHT / AMOUNT_PER_LINE) / 3,
             )
             obj.canvas.coords(obj.title,
-                obj.x * WIDTH + MARGIN + (WIDTH / AMOUNT_PER_LINE) / 1.9,
+                obj.x * WIDTH + MARGIN + (WIDTH / AMOUNT_PER_LINE) / 1.7,
                 obj.y * HEIGHT + MARGIN + (HEIGHT / AMOUNT_PER_LINE) / 4,
             )
-            obj.canvas.itemconfig(obj.title, font=("Consolas", int((obj.base_coords[2] - obj.base_coords[0])*0.07)), width=(obj.base_coords[2] - obj.base_coords[0])*0.5)
+            obj.canvas.itemconfig(obj.title, font=(obj.font, int((obj.base_coords[2] - obj.base_coords[0])*0.07)), width=(obj.base_coords[2] - obj.base_coords[0])*0.6)
             pil_icon = get_icon(conn, obj.canvas.itemcget(obj.title, "text")).resize(
                 (int((WIDTH / AMOUNT_PER_LINE) / 3),
                 int((WIDTH / AMOUNT_PER_LINE) / 3)),
@@ -321,9 +323,11 @@ image = image.resize((int(WIDTH / AMOUNT_PER_LINE *0.15), int(WIDTH / AMOUNT_PER
 image = ImageTk.PhotoImage(image)
 
 settings = []
+if not os.path.exists("settings.set"):
+    with open("settings.set", "w") as f:
+        f.write("#002244\n#0066bb\n#44aaff\n#0088ff\n#aaddff\nConsolas\n#ffffff\n")
 with open("settings.set", "r") as f:
     settings = [line.strip() for line in f.readlines()]
-
 
 apps = get_applications(conn)
 for i, app in enumerate(apps):

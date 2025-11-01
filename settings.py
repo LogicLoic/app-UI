@@ -17,9 +17,9 @@ def apply_settings(new_settings, canvas, objects):
         obj.zoomed_fill = settings[2]
         obj.base_outline = settings[3]
         obj.zoomed_outline = settings[4]
-        obj.thickness = settings[5]
-        obj.canvas.itemconfig(obj.box, width=obj.thickness, fill = obj.base_fill, outline = obj.base_outline)
-        obj.canvas.itemconfig(obj.title, font=(settings[6], settings[7]), fill=settings[8])
+        obj.canvas.itemconfig(obj.box, fill = obj.base_fill, outline = obj.base_outline)
+        obj.font = settings[5]
+        obj.canvas.itemconfig(obj.title, font=(settings[5]), fill=settings[6])
 
 def open_settings(canvas, objects):
     def save_and_close():
@@ -54,22 +54,13 @@ def open_settings(canvas, objects):
     Button5 = Button(window, text="Choose Pointed Border Color", command=lambda: setitem(new_settings, 4, choose_color()))
     Button5.pack(pady=10)
 
-    label1 = Label(window, text="Border Thickness")
-    label1.pack(pady=5)
-    Entry1 = Entry(window)
-    Entry1.insert(0, str(new_settings[5]))
-    Entry1.pack(pady=10)
     Label2 = Label(window, text="Font Name")
     Label2.pack(pady=5)
     Entry2 = Entry(window)
-    Entry2.insert(0, str(new_settings[6]))
+    Entry2.insert(0, str(new_settings[5]))
     Entry2.pack(pady=10)
-    label3 = Label(window, text="Font Size")
-    label3.pack(pady=5)
-    Entry3 = Entry(window)
-    Entry3.insert(0, str(new_settings[7]))
-    Entry3.pack(pady=10)
-    Button6 = Button(window, text="Choose Font Color", command=lambda: setitem(new_settings, 8, choose_color()))
+
+    Button6 = Button(window, text="Choose Font Color", command=lambda: setitem(new_settings, 6, choose_color()))
     Button6.pack(pady=10)
 
     close_button = Button(window, text="Close", command=save_and_close)
