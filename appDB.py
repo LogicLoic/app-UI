@@ -4,13 +4,13 @@ import sqlite3
 from PIL import Image, ImageTk
 
 def image_to_blob(image: Image.Image) -> bytes:
-    """Convertit une image PIL en données binaires."""
+    """Convert a PIL image to binary data."""
     with io.BytesIO() as output:
         image.save(output, format="PNG")
         return output.getvalue()
 
 def blob_to_image(blob: bytes) -> Image.Image:
-    """Recrée une image PIL à partir de données binaires."""
+    """Return a PIL image from binary data."""
     return Image.open(io.BytesIO(blob))
 
 def connect_db(db_name):
@@ -34,11 +34,15 @@ def create_table(conn):
 def add_application(conn, name, path, icon):
     """Add a new application to the database."""
     cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM applications WHERE name = ?', (name,))
+    if cursor.fetchone()[0] > 0:
+        return True  # Application already exists
     cursor.execute("""
         INSERT INTO applications (name, path, icon)
         VALUES (?, ?, ?)
     """, (name, path, image_to_blob(icon)))
     conn.commit()
+    return False  # Application added successfully
 
 def get_applications(conn):
     """Retrieve all applications from the database."""
@@ -67,3 +71,14 @@ def get_path(conn, app_name):
     cursor.execute('SELECT path FROM applications WHERE name = ?', (app_name,))
     result = cursor.fetchone()
     return result[0] if result else None
+    
+def get_icon(conn, app_name):
+    """Retrieve the icon of an application by its name."""
+    cursor = conn.cursor()
+    cursor.execute('SELECT icon FROM applications WHERE name = ?', (app_name,))
+    result = cursor.fetchone()
+    if result:
+        blob = result[0]
+        image_pil = Image.open(io.BytesIO(blob)).convert("RGBA")
+        return image_pil
+    return None

@@ -24,7 +24,7 @@ def apply_settings(new_settings, canvas, objects):
 def open_settings(canvas, objects):
     def save_and_close():
         with open("settings.set", "w") as f:
-            for item in settings:
+            for item in new_settings:
                 f.write(f"{item}\n")
         window.destroy()
         apply_settings(new_settings, canvas, objects)

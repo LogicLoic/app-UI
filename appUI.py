@@ -5,7 +5,7 @@ from IconLoader import extract_icon_from_exe as extract
 from tkinter import filedialog
 from appDB import *
 from settings import open_settings, apply_settings
-from os import system
+from os import system, remove
 
 def interpolate_color(color1, color2, t):
     c1 = [int(color1[i:i+2], 16) for i in (1, 3, 5)]
@@ -50,13 +50,13 @@ class Object:
             image=logo)
         
         self.icon = logo
-
+        
         self.title = canvas.create_text(
             x * WIDTH + MARGIN + 20 + (WIDTH / AMOUNT_PER_LINE * 0.8) / 2,
             y * HEIGHT + MARGIN + 40,
             text=title,
             fill="#ffffff",
-            font=("Consolas", int(10 * zoom_level)),
+            font=("Consolas", int((self.base_coords[2] - self.base_coords[0])*0.5)),
             width=(self.base_coords[2] - self.base_coords[0])*0.9,
             justify="center"
         )
@@ -124,13 +124,15 @@ def add_exe(conn, canvas, objects):
         name = file_path.split("/")[-1].split(".exe")[0]
         path = extract(file_path, name, ".", out_width=128, out_height=128)
         if path is None:
-            print(f"[WARN] Impossible d’extraire une icône depuis {file_path}")
+            print(f"[WARN] Impossible to extract icon from {file_path}")
             return
 
         icon = Image.open(path).resize((int(WIDTH / AMOUNT_PER_LINE * 0.15),
                                    int(WIDTH / AMOUNT_PER_LINE * 0.15)))
-
-        add_application(conn, name, file_path, icon)
+        remove(path)
+        if add_application(conn, name, file_path, icon):
+            print(f"[INFO] Application {name} already exists in the database.")
+            return
 
         icon_tk = ImageTk.PhotoImage(icon)
 
@@ -142,7 +144,7 @@ scroll_target = 0
 scroll_animation = None
 
 def on_scroll(event):
-    """Gère la molette et déclenche le défilement fluide."""
+    """Manage scrolling of the grid."""
     global scroll_target
 
     # Sens du scroll
@@ -153,7 +155,7 @@ def on_scroll(event):
     animate_scroll()
 
 def animate_scroll(duration=400, fps=60):
-    """Anime le déplacement fluide des objets sur le canvas."""
+    """Animate the scrolling of the grid smoothly."""
     global scroll_offset, scroll_target, scroll_animation
 
     if scroll_animation:
@@ -203,7 +205,7 @@ target_zoom = 1.0
 zoom_anim = None
 
 def on_ctrl_scroll(event):
-    """Ctrl + molette => zoom fluide de la grille"""
+    """Ctrl + molette => fluid zoom in/out."""
     global target_zoom
 
     # direction molette (Windows : delta multiple de 120)
@@ -214,7 +216,7 @@ def on_ctrl_scroll(event):
     start_zoom_animation()
 
 def start_zoom_animation(duration=400, fps=60):
-    """Anime le zoom global en interpolant toutes les positions"""
+    """Animate the zooming of the grid smoothly."""
     global zoom_level, target_zoom, zoom_anim, AMOUNT_PER_LINE
 
     if zoom_anim:
@@ -264,14 +266,23 @@ def start_zoom_animation(duration=400, fps=60):
             x1, y1, x2, y2 = obj.base_coords
             obj.canvas.coords(obj.box, x1, y1, x2, y2)
             obj.canvas.coords(obj.logo,
-                obj.x * WIDTH + MARGIN + 20,
-                obj.y * HEIGHT + MARGIN + 20,
+                obj.x * WIDTH + MARGIN + (WIDTH / AMOUNT_PER_LINE) / 6,
+                obj.y * HEIGHT + MARGIN + (HEIGHT / AMOUNT_PER_LINE) / 3,
             )
             obj.canvas.coords(obj.title,
-                obj.x * WIDTH + MARGIN + 20 + (WIDTH / AMOUNT_PER_LINE * 0.8) / 2,
-                obj.y * HEIGHT + MARGIN + 20 + (HEIGHT / AMOUNT_PER_LINE * 0.8) / 4,
+                obj.x * WIDTH + MARGIN + (WIDTH / AMOUNT_PER_LINE) / 1.9,
+                obj.y * HEIGHT + MARGIN + (HEIGHT / AMOUNT_PER_LINE) / 4,
             )
-        obj.canvas.itemconfig(obj.title, font=("Consolas", int(10 * (zoom_level)**0.5)))
+            obj.canvas.itemconfig(obj.title, font=("Consolas", int((obj.base_coords[2] - obj.base_coords[0])*0.07)), width=(obj.base_coords[2] - obj.base_coords[0])*0.5)
+            pil_icon = get_icon(conn, obj.canvas.itemcget(obj.title, "text")).resize(
+                (int((WIDTH / AMOUNT_PER_LINE) / 3),
+                int((WIDTH / AMOUNT_PER_LINE) / 3)),
+                Image.LANCZOS
+            )
+            icon_tk = ImageTk.PhotoImage(pil_icon)
+            obj.icon = icon_tk
+            obj.canvas.itemconfig(obj.logo, image=icon_tk)
+
         if i < frames:
             zoom_anim = root.after(int(1000 / fps), step, i + 1)
         else:
