@@ -226,9 +226,9 @@ def on_ctrl_scroll(event):
     target_zoom *= 1.2 if direction > 0 else 0.8
     target_zoom = max(0.4, min(2.5, target_zoom))  # limites
 
-    start_zoom_animation()
+    start_zoom_animation(objects)
 
-def start_zoom_animation(duration=400, fps=60):
+def start_zoom_animation(objects, duration=400, fps=60):
     """Animate the zooming of the grid smoothly."""
     global zoom_level, target_zoom, zoom_anim, AMOUNT_PER_LINE
 
@@ -327,12 +327,14 @@ def update_filters(event=None):
     apply_filters(valid_tags)
 
 def apply_filters(tags):
+    filtered_objects = []
     for obj in objects:
         app_name = obj.canvas.itemcget(obj.title, "text")
         app_tags = [t.lower() for t in get_tags(conn, app_name)]
 
         # Vérifie si l'application possède tous les tags demandés
         if all(tag in app_tags for tag in tags):
+            filtered_objects.append(obj)
             obj.canvas.itemconfig(obj.box, state="normal")
             obj.canvas.itemconfig(obj.logo, state="normal")
             obj.canvas.itemconfig(obj.title, state="normal")
@@ -340,6 +342,7 @@ def apply_filters(tags):
             obj.canvas.itemconfig(obj.box, state="hidden")
             obj.canvas.itemconfig(obj.logo, state="hidden")
             obj.canvas.itemconfig(obj.title, state="hidden")
+    start_zoom_animation(filtered_objects)
 
 conn = connect_db('apps.db')
 create_table(conn)
@@ -384,7 +387,7 @@ apps = get_applications(conn)
 apps.sort(key=lambda app: app[0].lower())
 for i, app in enumerate(apps):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), app[2], app[0]))
-start_zoom_animation()
+start_zoom_animation(objects)
 apply_settings(settings, canvas, objects)
 
 canvas.bind("<MouseWheel>", on_scroll) #Windows
