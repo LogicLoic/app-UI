@@ -26,7 +26,8 @@ def create_table(conn):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             path TEXT NOT NULL,
-            icon BLOB
+            icon BLOB,
+            tags TEXT
         )
     ''')
     conn.commit()
@@ -82,3 +83,19 @@ def get_icon(conn, app_name):
         image_pil = Image.open(io.BytesIO(blob)).convert("RGBA")
         return image_pil
     return None
+
+def get_tags(conn, app_name):
+    """Retrieve the tags of an application by its name."""
+    cursor = conn.cursor()
+    cursor.execute('SELECT tags FROM applications WHERE name = ?', (app_name,))
+    result = cursor.fetchone()
+    if result and result[0]:
+        return result[0].split(',')
+    return []
+
+def update_tags(conn, app_name, tags):
+    """Update the tags for a given application."""
+    cursor = conn.cursor()
+    tags_str = ','.join(tags)
+    cursor.execute('UPDATE applications SET tags = ? WHERE name = ?', (tags_str, app_name))
+    conn.commit()

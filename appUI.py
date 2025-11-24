@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 from IconLoader import extract_icon_from_exe as extract
 from tkinter import filedialog
 from appDB import *
+from appDetails import AppDetails
 from settings import open_settings, apply_settings
 import os
 import subprocess
@@ -115,10 +116,7 @@ class Object:
         step()
 
 def run(app_name):
-    path = get_path(conn, app_name)
-    if path:
-        working_dir = os.path.dirname(path)
-        subprocess.Popen([path], cwd=working_dir, shell=True)
+    details = AppDetails(root, conn, app_name, get_path(conn, app_name), get_tags(conn, app_name))
 
 def add_exe(conn, canvas, objects):
     file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
