@@ -104,5 +104,4 @@ class AppDetails:
         """Supprime l’application de la base."""
         if messagebox.askyesno("Confirmer", f"Supprimer {self.app_name} ?"):
             delete_application(self.conn, self.app_name)
-            self.refresh_callback()
             self.window.destroy()

@@ -117,6 +117,17 @@ class Object:
 
 def run(app_name):
     details = AppDetails(root, conn, app_name, get_path(conn, app_name), get_tags(conn, app_name))
+    root.wait_window(details.window)
+    if not exists_application(conn, app_name):
+        # Application was deleted
+        for obj in objects:
+            if obj.canvas.itemcget(obj.title, "text") == app_name:
+                obj.canvas.delete(obj.box)
+                obj.canvas.delete(obj.logo)
+                obj.canvas.delete(obj.title)
+                objects.remove(obj)
+                break
+    
 
 def add_exe(conn, canvas, objects):
     file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
@@ -138,6 +149,8 @@ def add_exe(conn, canvas, objects):
 
         i = len(objects)
         objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), icon_tk, name))
+        objects.sort(key=lambda obj: obj.canvas.itemcget(obj.title, "text").lower())
+        start_zoom_animation()
 
 scroll_offset = 0
 scroll_target = 0
@@ -291,6 +304,43 @@ def start_zoom_animation(duration=400, fps=60):
 
     step()
 
+def update_filters(event=None):
+    # Récupère le texte tapé
+    raw_text = Entry1.get().strip()
+
+    # Si vide : reset (affiche tout ou rien, selon ton fonctionnement)
+    if not raw_text:
+        apply_filters([])   # À adapter selon ton programme
+        return
+
+    # Transformer "tag1, tag2" en liste
+    typed_tags = [t.strip().lower() for t in raw_text.split(",") if t.strip()]
+
+    # Récupérer tags valides (ceux qui existent réellement)
+    valid_tags = [t for t in typed_tags if t in get_all_tags(conn)]  # ALL_TAGS = ensemble de tes tags existants
+
+    # Si aucun tag n'existe → ne rien faire
+    if not valid_tags:
+        return
+
+    # Appliquer filtre normal
+    apply_filters(valid_tags)
+
+def apply_filters(tags):
+    for obj in objects:
+        app_name = obj.canvas.itemcget(obj.title, "text")
+        app_tags = [t.lower() for t in get_tags(conn, app_name)]
+
+        # Vérifie si l'application possède tous les tags demandés
+        if all(tag in app_tags for tag in tags):
+            obj.canvas.itemconfig(obj.box, state="normal")
+            obj.canvas.itemconfig(obj.logo, state="normal")
+            obj.canvas.itemconfig(obj.title, state="normal")
+        else:
+            obj.canvas.itemconfig(obj.box, state="hidden")
+            obj.canvas.itemconfig(obj.logo, state="hidden")
+            obj.canvas.itemconfig(obj.title, state="hidden")
+
 conn = connect_db('apps.db')
 create_table(conn)
 
@@ -310,15 +360,18 @@ button1 = Button(root, text="Exit", command=lambda: exit())
 button1.place(relx=0.5, rely=0.5)
 
 button2 = Button(root, text="Add Executable", command=lambda: add_exe(conn, canvas, objects))
-button2.place(relx=0.9, rely=0.1)
+button2.place(relx=0.9, rely=0.05)
 
 button3 = Button(root, text="Settings", command=lambda: open_settings(canvas, objects))
-button3.place(relx=0.8, rely=0.1)
+button3.place(relx=0.8, rely=0.05)
+
+Label1 = Label(root, text="Tags filter (comma separated)", font=("Consolas", 12), fg="white", bg="#002244")
+Label1.place(relx=0.6, rely=0.025)
+Entry1 = Entry(root, width=30)
+Entry1.place(relx=0.6, rely=0.05)
+Entry1.bind("<KeyRelease>", update_filters)
 
 objects = []
-image = Image.open("gcfw-icon-128x128tr.png")
-image = image.resize((int(WIDTH / AMOUNT_PER_LINE *0.15), int(WIDTH / AMOUNT_PER_LINE *0.15)))
-image = ImageTk.PhotoImage(image)
 
 settings = []
 if not os.path.exists("settings.set"):
@@ -328,12 +381,10 @@ with open("settings.set", "r") as f:
     settings = [line.strip() for line in f.readlines()]
 
 apps = get_applications(conn)
+apps.sort(key=lambda app: app[0].lower())
 for i, app in enumerate(apps):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), app[2], app[0]))
-"""
-for i in range(100):
-    objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), image, str(i)))
-"""
+start_zoom_animation()
 apply_settings(settings, canvas, objects)
 
 canvas.bind("<MouseWheel>", on_scroll) #Windows
@@ -342,6 +393,7 @@ canvas.bind_all("<Button-4>", lambda e: on_scroll(type("Event", (), {"delta": 12
 canvas.bind_all("<Button-5>", lambda e: on_scroll(type("Event", (), {"delta": -120}))) # Linux (scroll down)
 canvas.bind_all("<Control-Button-4>", lambda e: on_ctrl_scroll(type("Event", (), {"delta": 120})))  # Linux up
 canvas.bind_all("<Control-Button-5>", lambda e: on_ctrl_scroll(type("Event", (), {"delta": -120}))) # Linux down
+
 root.mainloop()
 
 close_db(conn)

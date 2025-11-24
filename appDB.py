@@ -23,8 +23,7 @@ def create_table(conn):
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS applications (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            name TEXT PRIMARY KEY,
             path TEXT NOT NULL,
             icon BLOB,
             tags TEXT
@@ -56,10 +55,10 @@ def get_applications(conn):
         apps.append((name, path, image_tk))
     return apps
 
-def delete_application(conn, app_id):
+def delete_application(conn, app_name):
     """Delete an application from the database by its ID."""
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM applications WHERE id = ?', (app_id,))
+    cursor.execute('DELETE FROM applications WHERE id = ?', (app_name,))
     conn.commit()
 
 def close_db(conn):
@@ -93,9 +92,26 @@ def get_tags(conn, app_name):
         return result[0].split(',')
     return []
 
+def get_all_tags(conn):
+    """Retrieve all unique tags from the database."""
+    cursor = conn.cursor()
+    cursor.execute('SELECT tags FROM applications')
+    tags_set = set()
+    for (tags_str,) in cursor.fetchall():
+        if tags_str:
+            tags = tags_str.split(',')
+            tags_set.update(tags)
+    return list(tags_set)
+
 def update_tags(conn, app_name, tags):
     """Update the tags for a given application."""
     cursor = conn.cursor()
     tags_str = ','.join(tags)
     cursor.execute('UPDATE applications SET tags = ? WHERE name = ?', (tags_str, app_name))
     conn.commit()
+
+def exists_application(conn, app_name):
+    """Check if an application exists in the database by its name."""
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM applications WHERE name = ?', (app_name,))
+    return cursor.fetchone()[0] > 0
