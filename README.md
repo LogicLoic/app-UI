@@ -26,7 +26,7 @@ user-editable settings.
     `appUI.py` provides an organized UI to browse and launch apps.
 
 -   **User settings system**\
-    Defaults in `settings.py`, persistent config in `settings.set`.
+    Managed by `settings.py`, persistent config in `settings.set`.
 
 -   **Clean modular architecture**\
     UI / database / icons / settings are separated into manageable
@@ -40,10 +40,11 @@ user-editable settings.
     │
     ├── appUI.py                 # Main user interface
     ├── appDB.py                 # SQLite database logic
+    ├── appDetails.py            # Features
     ├── IconLoader.py            # Icon handling and processing
+    ├── settings.py              # Settings manager
     │
     ├── apps.db                  # Application catalog database
-    ├── settings.py              # Default settings
     ├── settings.set             # Persistent user settings
     │
     └── README.md                # Project documentation
@@ -63,15 +64,14 @@ The database `apps.db` contains all cataloged applications.\
 
 SQLite ensures a light, portable, and reliable data format.
 
-```plantuml
-@startuml
-entity Apps {
-  name : VARCHAR <<PK>>
-  path : VARCHAR
-  icon : BLOB
-  tags : VARCHAR
-}
-@enduml
+```mermaid
+classDiagram
+    class Apps {
+        +name : VARCHAR
+        +path : VARCHAR
+        +icon : BLOB
+        +tags : VARCHAR
+    }
 ```
 
 ------------------------------------------------------------------------
@@ -86,23 +86,6 @@ entity Apps {
 -   Providing fallback icons
 
 This ensures a consistent and visually appealing display.
-
-------------------------------------------------------------------------
-
-## ⚙️ Settings System
-
-Two-layer settings structure:
-
--   `settings.py` --- default built-in settings\
--   `settings.set` --- user-defined persistent settings
-
-Possible parameters include:
-
--   UI size and scaling\
--   Icon size\
--   Folders to scan\
--   Preferred sorting rules\
--   General application behavior
 
 ------------------------------------------------------------------------
 
