@@ -23,6 +23,7 @@ def apply_settings(new_settings, canvas, objects):
 
 def open_settings(canvas, objects):
     def save_and_close():
+        new_settings[5] = Entry1.get()
         with open("settings.set", "w") as f:
             for item in new_settings:
                 f.write(f"{item}\n")
@@ -54,11 +55,11 @@ def open_settings(canvas, objects):
     Button5 = Button(window, text="Choose Pointed Border Color", command=lambda: setitem(new_settings, 4, choose_color()))
     Button5.pack(pady=10)
 
-    Label2 = Label(window, text="Font Name")
-    Label2.pack(pady=5)
-    Entry2 = Entry(window)
-    Entry2.insert(0, str(new_settings[5]))
-    Entry2.pack(pady=10)
+    Label1 = Label(window, text="Font Name :")
+    Label1.pack(pady=5)
+    Entry1 = Entry(window)
+    Entry1.insert(0, str(new_settings[5]))
+    Entry1.pack(pady=10)
 
     Button6 = Button(window, text="Choose Font Color", command=lambda: setitem(new_settings, 6, choose_color()))
     Button6.pack(pady=10)

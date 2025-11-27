@@ -56,9 +56,9 @@ def get_applications(conn):
     return apps
 
 def delete_application(conn, app_name):
-    """Delete an application from the database by its ID."""
+    """Delete an application from the database by its name."""
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM applications WHERE id = ?', (app_name,))
+    cursor.execute('DELETE FROM applications WHERE name = ?', (app_name,))
     conn.commit()
 
 def close_db(conn):

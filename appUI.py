@@ -70,7 +70,7 @@ class Object:
         for tag in (self.box, self.logo, self.title):
             canvas.tag_bind(tag, "<Enter>", self.on_enter)
             canvas.tag_bind(tag, "<Leave>", self.on_leave)
-            canvas.tag_bind(tag, "<Button-1>", lambda e, t=title: run(t))
+            canvas.tag_bind(tag, "<Button-1>", lambda e, t=title: open_details(t))
 
     def on_enter(self, event):
         self.animate_to(1.0, duration=1000)
@@ -115,19 +115,9 @@ class Object:
 
         step()
 
-def run(app_name):
-    details = AppDetails(root, conn, app_name, get_path(conn, app_name), get_tags(conn, app_name))
-    root.wait_window(details.window)
-    if not exists_application(conn, app_name):
-        # Application was deleted
-        for obj in objects:
-            if obj.canvas.itemcget(obj.title, "text") == app_name:
-                obj.canvas.delete(obj.box)
-                obj.canvas.delete(obj.logo)
-                obj.canvas.delete(obj.title)
-                objects.remove(obj)
-                break
-    
+def open_details(app_name):
+    details = AppDetails(root, conn, app_name, get_path(conn, app_name), get_tags(conn, app_name), close_on_run_var.get(), objects)
+    details.refresh_callback = lambda: apply_filters([t.strip().lower() for t in Entry1.get().strip().split(",") if t.strip()])
 
 def add_exe(conn, canvas, objects):
     file_path = filedialog.askopenfilename(title="Select Executable", filetypes=[("Executable Files", "*.exe")])
@@ -150,7 +140,7 @@ def add_exe(conn, canvas, objects):
         i = len(objects)
         objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), icon_tk, name))
         objects.sort(key=lambda obj: obj.canvas.itemcget(obj.title, "text").lower())
-        start_zoom_animation()
+        start_zoom_animation(objects)
 
 scroll_offset = 0
 scroll_target = 0
@@ -160,9 +150,8 @@ def on_scroll(event):
     """Manage scrolling of the grid."""
     global scroll_target
 
-    # Sens du scroll
     direction = 1 if event.delta > 0 else -1
-    step = HEIGHT / 10  # Distance à parcourir par "cran"
+    step = HEIGHT / 10 
     scroll_target += direction * step
     
     animate_scroll()
@@ -187,16 +176,13 @@ def animate_scroll(duration=400, fps=60):
         dy = new_offset - scroll_offset
         scroll_offset = new_offset
 
-        # Déplace tout le contenu
         for obj in objects:
             canvas.move(obj.box, 0, dy)
             canvas.move(obj.logo, 0, dy)
             canvas.move(obj.title, 0, dy)
 
-            # Met à jour les coordonnées internes logiques
-            obj.y += dy / HEIGHT  # proportionnel à la taille de l’écran
+            obj.y += dy / HEIGHT
 
-            # Tu peux aussi recalculer base_coords & zoomed_coords si tu veux
             obj.base_coords = tuple(
                 c + (dy / HEIGHT) * HEIGHT if j % 2 == 1 else c
                 for j, c in enumerate(obj.base_coords)
@@ -221,10 +207,9 @@ def on_ctrl_scroll(event):
     """Ctrl + molette => fluid zoom in/out."""
     global target_zoom
 
-    # direction molette (Windows : delta multiple de 120)
     direction = 1 if event.delta > 0 else -1
     target_zoom *= 1.2 if direction > 0 else 0.8
-    target_zoom = max(0.4, min(2.5, target_zoom))  # limites
+    target_zoom = max(0.4, min(2.5, target_zoom))
 
     start_zoom_animation(objects)
 
@@ -257,11 +242,9 @@ def start_zoom_animation(objects, duration=400, fps=60):
             target_x = (idx % AMOUNT_PER_LINE) / AMOUNT_PER_LINE
             target_y = (idx // AMOUNT_PER_LINE) / AMOUNT_PER_LINE
 
-            # interpolation fluide vers nouvelle position
             obj.x += (target_x - obj.x) * 0.3
             obj.y += (target_y - obj.y) * 0.3
 
-            # mise à jour des coordonnées
             obj.base_coords = (
                 obj.x * WIDTH + MARGIN,
                 obj.y * HEIGHT + MARGIN,
@@ -275,7 +258,6 @@ def start_zoom_animation(objects, duration=400, fps=60):
                 obj.base_coords[3] + (MARGIN * zoom_level/2)
             )
 
-            # repositionnement
             x1, y1, x2, y2 = obj.base_coords
             obj.canvas.coords(obj.box, x1, y1, x2, y2)
             obj.canvas.coords(obj.logo,
@@ -305,25 +287,18 @@ def start_zoom_animation(objects, duration=400, fps=60):
     step()
 
 def update_filters(event=None):
-    # Récupère le texte tapé
     raw_text = Entry1.get().strip()
 
-    # Si vide : reset (affiche tout ou rien, selon ton fonctionnement)
     if not raw_text:
-        apply_filters([])   # À adapter selon ton programme
+        apply_filters([])
         return
 
-    # Transformer "tag1, tag2" en liste
     typed_tags = [t.strip().lower() for t in raw_text.split(",") if t.strip()]
+    valid_tags = [t for t in typed_tags if t in get_all_tags(conn)]
 
-    # Récupérer tags valides (ceux qui existent réellement)
-    valid_tags = [t for t in typed_tags if t in get_all_tags(conn)]  # ALL_TAGS = ensemble de tes tags existants
-
-    # Si aucun tag n'existe → ne rien faire
     if not valid_tags:
         return
 
-    # Appliquer filtre normal
     apply_filters(valid_tags)
 
 def apply_filters(tags):
@@ -332,7 +307,6 @@ def apply_filters(tags):
         app_name = obj.canvas.itemcget(obj.title, "text")
         app_tags = [t.lower() for t in get_tags(conn, app_name)]
 
-        # Vérifie si l'application possède tous les tags demandés
         if all(tag in app_tags for tag in tags):
             filtered_objects.append(obj)
             obj.canvas.itemconfig(obj.box, state="normal")
@@ -368,11 +342,13 @@ button2.place(relx=0.9, rely=0.05)
 button3 = Button(root, text="Settings", command=lambda: open_settings(canvas, objects))
 button3.place(relx=0.8, rely=0.05)
 
-Label1 = Label(root, text="Tags filter (comma separated)", font=("Consolas", 12), fg="white", bg="#002244")
-Label1.place(relx=0.6, rely=0.025)
 Entry1 = Entry(root, width=30)
 Entry1.place(relx=0.6, rely=0.05)
 Entry1.bind("<KeyRelease>", update_filters)
+
+close_on_run_var = IntVar()
+checkbutton = Checkbutton(root, text="Close on Run", variable=close_on_run_var, onvalue=1, offvalue=0)
+checkbutton.place(relx=0.5, rely=0.05)
 
 objects = []
 
@@ -382,6 +358,9 @@ if not os.path.exists("settings.set"):
         f.write("#002244\n#0066bb\n#44aaff\n#0088ff\n#aaddff\nConsolas\n#ffffff\n")
 with open("settings.set", "r") as f:
     settings = [line.strip() for line in f.readlines()]
+    
+Label1 = Label(root, text="Tags filter (comma separated)", font=("Consolas", 12), fg="white", bg=settings[0])
+Label1.place(relx=0.6, rely=0.025)
 
 apps = get_applications(conn)
 apps.sort(key=lambda app: app[0].lower())
