@@ -116,7 +116,7 @@ class Object:
         step()
 
 def open_details(app_name):
-    details = AppDetails(root, conn, app_name, get_path(conn, app_name), get_tags(conn, app_name), close_on_run_var.get(), objects)
+    details = AppDetails(root, conn, app_name, get_path(conn, app_name), get_tags(conn, app_name), close_on_run_var.get(), objects, settings)
     details.refresh_callback = lambda: apply_filters([t.strip().lower() for t in Entry1.get().strip().split(",") if t.strip()])
 
 def add_exe(conn, canvas, objects):
@@ -139,6 +139,7 @@ def add_exe(conn, canvas, objects):
 
         i = len(objects)
         objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), icon_tk, name))
+        apply_settings(settings, canvas, [objects[-1]], settings, widgets)
         objects.sort(key=lambda obj: obj.canvas.itemcget(obj.title, "text").lower())
         start_zoom_animation(objects)
 
@@ -268,7 +269,7 @@ def start_zoom_animation(objects, duration=400, fps=60):
                 obj.x * WIDTH + MARGIN + (WIDTH / AMOUNT_PER_LINE) / 1.7,
                 obj.y * HEIGHT + MARGIN + (HEIGHT / AMOUNT_PER_LINE) / 4,
             )
-            obj.canvas.itemconfig(obj.title, font=(obj.font, int((obj.base_coords[2] - obj.base_coords[0])*0.07)), width=(obj.base_coords[2] - obj.base_coords[0])*0.6)
+            obj.canvas.itemconfig(obj.title, font=(settings[5], int((obj.base_coords[2] - obj.base_coords[0])*0.07)), width=(obj.base_coords[2] - obj.base_coords[0])*0.6)
             pil_icon = get_icon(conn, obj.canvas.itemcget(obj.title, "text")).resize(
                 (int((WIDTH / AMOUNT_PER_LINE) / 3),
                 int((WIDTH / AMOUNT_PER_LINE) / 3)),
@@ -293,19 +294,18 @@ def update_filters(event=None):
         apply_filters([])
         return
 
-    typed_tags = [t.strip().lower() for t in raw_text.split(",") if t.strip()]
+    typed_tags = [t.strip() for t in raw_text.split(",") if t.strip()]
     valid_tags = [t for t in typed_tags if t in get_all_tags(conn)]
 
     if not valid_tags:
         return
-
     apply_filters(valid_tags)
 
 def apply_filters(tags):
     filtered_objects = []
     for obj in objects:
         app_name = obj.canvas.itemcget(obj.title, "text")
-        app_tags = [t.lower() for t in get_tags(conn, app_name)]
+        app_tags = [t for t in get_tags(conn, app_name)]
 
         if all(tag in app_tags for tag in tags):
             filtered_objects.append(obj)
@@ -330,16 +330,23 @@ AMOUNT_PER_LINE = 6
 root.attributes("-fullscreen", True)
 root.title("App catalog")
 
+settings = []
+if not os.path.exists("settings.set"):
+    with open("settings.set", "w") as f:
+        f.write("#002244\n#0066bb\n#44aaff\n#0088ff\n#aaddff\nConsolas\n#ffffff\n")
+with open("settings.set", "r") as f:
+    settings = [line.strip() for line in f.readlines()]
+
 canvas = Canvas(root, bg="#002244")
 canvas.pack(fill=BOTH, expand=True)
 
 button1 = Button(root, text="Exit", command=lambda: exit())
-button1.place(relx=0.5, rely=0.5)
+button1.place(relx=0.97, rely=0.02)
 
 button2 = Button(root, text="Add Executable", command=lambda: add_exe(conn, canvas, objects))
 button2.place(relx=0.9, rely=0.05)
 
-button3 = Button(root, text="Settings", command=lambda: open_settings(canvas, objects))
+button3 = Button(root, text="Settings", command=lambda: open_settings(canvas, objects, settings, widgets))
 button3.place(relx=0.8, rely=0.05)
 
 Entry1 = Entry(root, width=30)
@@ -347,27 +354,22 @@ Entry1.place(relx=0.6, rely=0.05)
 Entry1.bind("<KeyRelease>", update_filters)
 
 close_on_run_var = IntVar()
-checkbutton = Checkbutton(root, text="Close on Run", variable=close_on_run_var, onvalue=1, offvalue=0)
+checkbutton = Checkbutton(root, text="Close on Run", variable=close_on_run_var, onvalue=1, offvalue=0, bg = settings[0], fg=settings[6], font=(settings[5], 10), activebackground=settings[0], activeforeground=settings[6])
 checkbutton.place(relx=0.5, rely=0.05)
 
-objects = []
-
-settings = []
-if not os.path.exists("settings.set"):
-    with open("settings.set", "w") as f:
-        f.write("#002244\n#0066bb\n#44aaff\n#0088ff\n#aaddff\nConsolas\n#ffffff\n")
-with open("settings.set", "r") as f:
-    settings = [line.strip() for line in f.readlines()]
-    
-Label1 = Label(root, text="Tags filter (comma separated)", font=("Consolas", 12), fg="white", bg=settings[0])
+Label1 = Label(root, text="Tags filter (comma separated)", font=(settings[5], 12), fg=settings[6], bg=settings[0])
 Label1.place(relx=0.6, rely=0.025)
 
+widgets = [checkbutton, Label1, Entry1, button1, button2, button3]
+
+objects = []
+   
 apps = get_applications(conn)
 apps.sort(key=lambda app: app[0].lower())
 for i, app in enumerate(apps):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), app[2], app[0]))
 start_zoom_animation(objects)
-apply_settings(settings, canvas, objects)
+apply_settings(settings, canvas, objects, settings, widgets)
 
 canvas.bind("<MouseWheel>", on_scroll) #Windows
 canvas.bind_all("<Control-MouseWheel>", on_ctrl_scroll)

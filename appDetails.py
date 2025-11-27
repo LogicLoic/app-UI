@@ -7,7 +7,7 @@ import subprocess
 from appDB import delete_application, update_tags, get_icon, get_tags
 
 class AppDetails:
-    def __init__(self, master, conn, app_name, app_path, refresh_callback, close_on_run, objects):
+    def __init__(self, master, conn, app_name, app_path, refresh_callback, close_on_run, objects, settings):
         self.master = master
         self.conn = conn
         self.app_name = app_name
@@ -16,49 +16,49 @@ class AppDetails:
         self.close_on_run = close_on_run
         self.tags = get_tags(conn, app_name) or []
         self.objects = objects
+        self.settings = settings
 
         self.window = tk.Toplevel(master)
         self.window.title(f"Details — {app_name}")
         self.window.geometry("600x700")
-        self.window.configure(bg="#1e1e1e")
+        self.window.configure(bg=self.settings[0])
         
         # --- App icon ---
         self.icon_pil = get_icon(conn, app_name)
         if self.icon_pil:
             self.icon_img = ImageTk.PhotoImage(self.icon_pil.resize((128, 128)))
-            self.icon_label = tk.Label(self.window, image=self.icon_img, bg="#1e1e1e")
+            self.icon_label = tk.Label(self.window, image=self.icon_img, bg=settings[0])
             self.icon_label.pack(pady=10)
         else:
-            self.icon_label = tk.Label(self.window, text="[no icon]", fg="gray", bg="#1e1e1e")
+            self.icon_label = tk.Label(self.window, text="[no icon]", fg="gray", bg=self.settings[0])
             self.icon_label.pack(pady=10)
-
+    
         # --- App name ---
-        tk.Label(self.window, text=app_name, font=("Consolas", 18, "bold"), fg="white", bg="#1e1e1e").pack()
-
+        tk.Label(self.window, text=app_name, font=(self.settings[5], 18, "bold"), fg=self.settings[6], bg=self.settings[1]).pack()
         # --- App path ---
-        tk.Label(self.window, text=app_path, font=("Consolas", 10), fg="lightgray", bg="#1e1e1e").pack(pady=5)
+        tk.Label(self.window, text=app_path, font=(self.settings[5], 10), fg=self.settings[6], bg=self.settings[1]).pack(pady=5)
 
         # --- Options box ---
-        tk.Label(self.window, text="Options :", font=("Consolas", 12), fg="white", bg="#1e1e1e").pack(pady=(20, 5))
-        self.options_entry = tk.Entry(self.window, width=50, font=("Consolas", 11))
+        tk.Label(self.window, text="Options :", font=(self.settings[5], 12), fg=self.settings[6], bg=self.settings[1]).pack(pady=(20, 5))
+        self.options_entry = tk.Entry(self.window, width=50, bg=settings[1], fg=settings[6], insertbackground=settings[3], font=(settings[5], 11))
         self.options_entry.pack(pady=5)
 
         # --- Buttons ---
-        button_frame = tk.Frame(self.window, bg="#1e1e1e")
+        button_frame = tk.Frame(self.window, bg=self.settings[0])
         button_frame.pack(pady=20)
 
-        tk.Button(button_frame, text="▶ Launch", width=15, command=self.run_app).grid(row=0, column=0, padx=10)
-        tk.Button(button_frame, text="🗑 Delete", width=15, command=self.delete_app).grid(row=0, column=1, padx=10)
-        tk.Button(button_frame, text="↩ Cancel", width=15, command=self.window.destroy).grid(row=0, column=2, padx=10)
+        tk.Button(button_frame, text="▶ Launch", width=15, command=self.run_app, bg=settings[1], fg=settings[6], font=(settings[5], 10)).grid(row=0, column=0, padx=10)
+        tk.Button(button_frame, text="🗑 Delete", width=15, command=self.delete_app, bg=settings[1], fg=settings[6], font=(settings[5], 10)).grid(row=0, column=1, padx=10)
+        tk.Button(button_frame, text="↩ Cancel", width=15, command=self.window.destroy, bg=settings[1], fg=settings[6], font=(settings[5], 10)).grid(row=0, column=2, padx=10)
 
         # --- Tags section ---
-        tk.Label(self.window, text="Tags :", font=("Consolas", 12), fg="white", bg="#1e1e1e").pack(pady=(10, 5))
-        self.tag_frame = tk.Frame(self.window, bg="#1e1e1e")
+        tk.Label(self.window, text="Tags :", font=(self.settings[5], 12), fg=self.settings[6], bg=self.settings[0]).pack(pady=(10, 5))
+        self.tag_frame = tk.Frame(self.window, bg=self.settings[0])
         self.tag_frame.pack(pady=5)
 
-        self.tag_entry = tk.Entry(self.window, width=30, font=("Consolas", 11))
+        self.tag_entry = tk.Entry(self.window, width=30, bg=settings[1], fg=settings[6], insertbackground=settings[3], font=(settings[5], 11))
         self.tag_entry.pack(pady=(5, 5))
-        tk.Button(self.window, text="Add tag", command=self.add_tag).pack()
+        tk.Button(self.window, text="Add tag", command=self.add_tag, bg=settings[1], fg=settings[6], font=(settings[5], 10)).pack()
 
         self.render_tags()
 
@@ -69,11 +69,11 @@ class AppDetails:
             widget.destroy()
 
         for tag in self.tags:
-            frame = tk.Frame(self.tag_frame, bg="#2a2a2a", padx=5, pady=2)
+            frame = tk.Frame(self.tag_frame, bg=self.settings[1], padx=5, pady=2)
             frame.pack(side=tk.TOP, fill="x", pady=2)
-            lbl = tk.Label(frame, text=tag, fg="white", bg="#2a2a2a", font=("Consolas", 10))
+            lbl = tk.Label(frame, text=tag, fg=self.settings[6], bg=self.settings[1], font=(self.settings[5], 10))
             lbl.pack(side=tk.LEFT)
-            btn = tk.Button(frame, text="✖", command=lambda t=tag: self.remove_tag(t), bg="#444", fg="white", bd=0)
+            btn = tk.Button(frame, text="✖", command=lambda t=tag: self.remove_tag(t), bg=self.settings[0], fg=self.settings[1], bd=0)
             btn.pack(side=tk.RIGHT)
 
     def add_tag(self):

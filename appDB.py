@@ -38,9 +38,9 @@ def add_application(conn, name, path, icon):
     if cursor.fetchone()[0] > 0:
         return True  # Application already exists
     cursor.execute("""
-        INSERT INTO applications (name, path, icon)
-        VALUES (?, ?, ?)
-    """, (name, path, image_to_blob(icon)))
+        INSERT INTO applications (name, path, icon, tags)
+        VALUES (?, ?, ?, ?)
+    """, (name, path, image_to_blob(icon), name))
     conn.commit()
     return False  # Application added successfully
 
@@ -109,9 +109,3 @@ def update_tags(conn, app_name, tags):
     tags_str = ','.join(tags)
     cursor.execute('UPDATE applications SET tags = ? WHERE name = ?', (tags_str, app_name))
     conn.commit()
-
-def exists_application(conn, app_name):
-    """Check if an application exists in the database by its name."""
-    cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) FROM applications WHERE name = ?', (app_name,))
-    return cursor.fetchone()[0] > 0

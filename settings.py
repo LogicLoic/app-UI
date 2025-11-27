@@ -8,9 +8,8 @@ def choose_color():
         return color_code[1]
     return "#000000"
 
-def apply_settings(new_settings, canvas, objects):
-    global settings
-    settings = new_settings
+def apply_settings(new_settings, canvas, objects, settings, widgets):
+    settings[:] = new_settings
     canvas.config(bg=settings[0])
     for obj in objects:
         obj.base_fill = settings[1]
@@ -20,25 +19,40 @@ def apply_settings(new_settings, canvas, objects):
         obj.canvas.itemconfig(obj.box, fill = obj.base_fill, outline = obj.base_outline)
         obj.font = settings[5]
         obj.canvas.itemconfig(obj.title, font=(settings[5]), fill=settings[6])
+    
+    for w in widgets:
+        try:
+            if isinstance(w, (Label)):
+                w.config(bg=settings[0], fg=settings[6], font=(settings[5], 10))
+            elif isinstance(w, (Button)):
+                w.config(bg=settings[1], fg=settings[6], font=(settings[5], 11))
+            elif isinstance(w, (Checkbutton)):
+                w.config(bg=settings[0], fg=settings[6], font=(settings[5], 10), activebackground=settings[0], activeforeground=settings[6], selectcolor=settings[1])
+            elif isinstance(w, (Entry)):
+                w.config(bg=settings[1], fg=settings[6], insertbackground=settings[3], font=(settings[5], 11))
+            else:
+                # autres widgets -> juste couleurs
+                w.config(bg=settings[0], fg=settings[6])
+        except Exception as e:
+            print(f"Could not update widget {w}: {e}")
 
-def open_settings(canvas, objects):
+def open_settings(canvas, objects, settings, widgets):
     def save_and_close():
         new_settings[5] = Entry1.get()
         with open("settings.set", "w") as f:
             for item in new_settings:
                 f.write(f"{item}\n")
         window.destroy()
-        apply_settings(new_settings, canvas, objects)
+        apply_settings(new_settings, canvas, objects, settings, widgets)
 
     with open("settings.set", "r") as f:
-        settings = [line.strip() for line in f.readlines()]
+        settings[:] = [line.strip() for line in f.readlines()]
 
     window = Tk()
     window.title("Settings")
     window.geometry("400x700")
     window.resizable(False, False)
-    window.attributes("-topmost", True)
-
+    
     new_settings = settings.copy()
 
     label = Label(window, text="Settings")
