@@ -3,7 +3,7 @@
 ### *A customizable catalog to organize, display, and launch all your applications.*
 
 **app-UI** is a Python application designed to create a **custom,
-persistent catalog of software**.\
+persistent catalog of software**.
 It provides a clean graphical interface to browse, manage, and launch
 programs, using an SQLite database, automatic icon management, and
 user-editable settings.
@@ -12,23 +12,23 @@ user-editable settings.
 
 ## ✨ Features
 
--   **Application catalog**\
+-   **Application catalog**
     Add applications with a name, executable path, icon, and more.
 
--   **Persistent SQLite database**\
+-   **Persistent SQLite database**
     `apps.db` stores all entries and is managed via `appDB.py`.
 
--   **Automatic icon loading**\
+-   **Automatic icon loading**
     `IconLoader.py` extracts, loads, or generates icons to ensure
     consistent visuals.
 
--   **Graphical user interface**\
+-   **Graphical user interface**
     `appUI.py` provides an organized UI to browse and launch apps.
 
--   **User settings system**\
+-   **User settings system**
     Managed by `settings.py`, persistent config in `settings.set`.
 
--   **Clean modular architecture**\
+-   **Clean modular architecture**
     UI / database / icons / settings are separated into manageable
     modules.
 
@@ -53,13 +53,13 @@ user-editable settings.
 
 ## 🗄️ Database System
 
-The database `apps.db` contains all cataloged applications.\
+The database `apps.db` contains all cataloged applications.
 `appDB.py` manages:
 
--   Database creation and initialization\
--   Adding and removing applications\
--   Editing entries\
--   Performing queries\
+-   Database creation and initialization
+-   Adding and removing applications
+-   Editing entries
+-   Performing queries
 -   Ensuring data persistence
 
 SQLite ensures a light, portable, and reliable data format.
@@ -80,9 +80,9 @@ classDiagram
 
 `IconLoader.py` handles all logic related to icons:
 
--   Loading icons from files\
--   Extracting icons from executables (if available)\
--   Resizing or formatting icons\
+-   Loading icons from files
+-   Extracting icons from executables (if available)
+-   Resizing or formatting icons
 -   Providing fallback icons
 
 This ensures a consistent and visually appealing display.
@@ -91,5 +91,4 @@ This ensures a consistent and visually appealing display.
 
 ## 👤 Author
 
-Developed by **LogicLoïc**\
-YouTube & Discord: **Logic Loïc**
+Developed by **Logic Loïc**

@@ -58,7 +58,7 @@ class Object:
             self.y * HEIGHT + MARGIN + (HEIGHT / AMOUNT_PER_LINE) / 4.5,
             text=title,
             fill="#ffffff",
-            font=("Consolas", int((self.base_coords[2] - self.base_coords[0])*0.07)),
+            font=(self.font, int((self.base_coords[2] - self.base_coords[0])*0.07)),
             width=(self.base_coords[2] - self.base_coords[0])*0.8,
             justify="center"
         )
@@ -138,8 +138,9 @@ def add_exe(conn, canvas, objects):
         icon_tk = ImageTk.PhotoImage(icon)
 
         i = len(objects)
-        objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), icon_tk, name))
-        apply_settings(settings, canvas, [objects[-1]], settings, widgets)
+        new_obj = Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), icon_tk, name)
+        apply_settings(settings, canvas, [new_obj], widgets)
+        objects.append(new_obj)
         objects.sort(key=lambda obj: obj.canvas.itemcget(obj.title, "text").lower())
         start_zoom_animation(objects)
 
@@ -269,7 +270,9 @@ def start_zoom_animation(objects, duration=400, fps=60):
                 obj.x * WIDTH + MARGIN + (WIDTH / AMOUNT_PER_LINE) / 1.7,
                 obj.y * HEIGHT + MARGIN + (HEIGHT / AMOUNT_PER_LINE) / 4,
             )
-            obj.canvas.itemconfig(obj.title, font=(settings[5], int((obj.base_coords[2] - obj.base_coords[0])*0.07)), width=(obj.base_coords[2] - obj.base_coords[0])*0.6)
+            #The row below doesn't work, the font theme can't be applied somewhy.
+            #obj.canvas.itemconfig(obj.title, font=(settings[5], int((obj.base_coords[2] - obj.base_coords[0])*0.07)), width=(obj.base_coords[2] - obj.base_coords[0])*0.6)
+
             pil_icon = get_icon(conn, obj.canvas.itemcget(obj.title, "text")).resize(
                 (int((WIDTH / AMOUNT_PER_LINE) / 3),
                 int((WIDTH / AMOUNT_PER_LINE) / 3)),
@@ -341,24 +344,34 @@ canvas = Canvas(root, bg="#002244")
 canvas.pack(fill=BOTH, expand=True)
 
 button1 = Button(root, text="Exit", command=lambda: exit())
-button1.place(relx=0.97, rely=0.02)
+button1.place(x=WIDTH - 44, y=18)
 
 button2 = Button(root, text="Add Executable", command=lambda: add_exe(conn, canvas, objects))
-button2.place(relx=0.9, rely=0.05)
+button2.place(x=WIDTH - 144, y=45)
 
 button3 = Button(root, text="Settings", command=lambda: open_settings(canvas, objects, settings, widgets))
-button3.place(relx=0.8, rely=0.05)
+button3.place(x=WIDTH - 288, y=45)
 
 Entry1 = Entry(root, width=30)
-Entry1.place(relx=0.6, rely=0.05)
+Entry1.place(x=WIDTH - 576, y=45)
 Entry1.bind("<KeyRelease>", update_filters)
 
 close_on_run_var = IntVar()
-checkbutton = Checkbutton(root, text="Close on Run", variable=close_on_run_var, onvalue=1, offvalue=0, bg = settings[0], fg=settings[6], font=(settings[5], 10), activebackground=settings[0], activeforeground=settings[6])
-checkbutton.place(relx=0.5, rely=0.05)
+checkbutton = Checkbutton(
+    root, text="Close on Run", variable=close_on_run_var,
+    onvalue=1, offvalue=0,
+    bg=settings[0], fg=settings[6],
+    font=(settings[5], 10),
+    activebackground=settings[0], activeforeground=settings[6]
+)
+checkbutton.place(x=WIDTH - 720, y=45)
 
-Label1 = Label(root, text="Tags filter (comma separated)", font=(settings[5], 12), fg=settings[6], bg=settings[0])
-Label1.place(relx=0.6, rely=0.025)
+Label1 = Label(
+    root, text="Tags filter (comma separated)",
+    font=(settings[5], 12),
+    fg=settings[6], bg=settings[0]
+)
+Label1.place(x=WIDTH - 576, y=22)
 
 widgets = [checkbutton, Label1, Entry1, button1, button2, button3]
 
@@ -368,8 +381,8 @@ apps = get_applications(conn)
 apps.sort(key=lambda app: app[0].lower())
 for i, app in enumerate(apps):
     objects.append(Object(canvas, (i%AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), (i//AMOUNT_PER_LINE)*(1/AMOUNT_PER_LINE), app[2], app[0]))
+apply_settings(settings, canvas, objects, widgets)
 start_zoom_animation(objects)
-apply_settings(settings, canvas, objects, settings, widgets)
 
 canvas.bind("<MouseWheel>", on_scroll) #Windows
 canvas.bind_all("<Control-MouseWheel>", on_ctrl_scroll)
