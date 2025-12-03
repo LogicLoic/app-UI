@@ -26,7 +26,8 @@ def create_table(conn):
             name TEXT PRIMARY KEY,
             path TEXT NOT NULL,
             icon BLOB,
-            tags TEXT
+            tags TEXT,
+            options TEXT
         )
     ''')
     conn.commit()
@@ -109,3 +110,16 @@ def update_tags(conn, app_name, tags):
     tags_str = ','.join(tags)
     cursor.execute('UPDATE applications SET tags = ? WHERE name = ?', (tags_str, app_name))
     conn.commit()
+
+def update_options(conn, app_name, options):
+    """Update the options for a given application."""
+    cursor = conn.cursor()
+    cursor.execute('UPDATE applications SET options = ? WHERE name = ?', (options, app_name))
+    conn.commit()
+
+def get_options(conn, app_name):
+    """Retrieve the options of an application by its name."""
+    cursor = conn.cursor()
+    cursor.execute('SELECT options FROM applications WHERE name = ?', (app_name,))
+    result = cursor.fetchone()
+    return result[0] if result and result[0] else ""

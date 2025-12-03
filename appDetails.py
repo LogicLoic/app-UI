@@ -4,7 +4,8 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import subprocess
-from appDB import delete_application, update_tags, get_icon, get_tags
+from appDB import delete_application, update_tags, get_icon, get_tags, get_options, update_options
+import shlex
 
 class AppDetails:
     def __init__(self, master, conn, app_name, app_path, refresh_callback, close_on_run, objects, settings):
@@ -42,6 +43,8 @@ class AppDetails:
         tk.Label(self.window, text="Options :", font=(self.settings[5], 12), fg=self.settings[6], bg=self.settings[1]).pack(pady=(20, 5))
         self.options_entry = tk.Entry(self.window, width=50, bg=settings[1], fg=settings[6], insertbackground=settings[3], font=(settings[5], 11))
         self.options_entry.pack(pady=5)
+        self.options_entry.insert(0, get_options(conn, app_name) or "")
+        self.options_entry.bind("<KeyRelease>", self.update_local_options)
 
         # --- Buttons ---
         button_frame = tk.Frame(self.window, bg=self.settings[0])
@@ -62,6 +65,10 @@ class AppDetails:
 
         self.render_tags()
 
+    def update_local_options(self, event=None):
+        """Update options in the database when changed."""
+        opts = self.options_entry.get().strip()
+        update_options(self.conn, self.app_name, opts)
     # --------------------- TAGS ---------------------
     def render_tags(self):
         """Affiche dynamiquement les tags actuels."""
@@ -96,7 +103,8 @@ class AppDetails:
         opts = self.options_entry.get().strip()
         try:
             working_dir = os.path.dirname(self.app_path)
-            subprocess.Popen([self.app_path] + opts.split(), cwd=working_dir, shell=True)
+            subprocess.Popen([self.app_path] + shlex.split(opts), cwd=working_dir)
+            print(f"Launching: {self.app_path} {opts}")
         except Exception as e:
             messagebox.showerror("Error", f"Impossible to launch : {e}")
         if self.close_on_run:

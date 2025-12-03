@@ -67,10 +67,11 @@ SQLite ensures a light, portable, and reliable data format.
 ```mermaid
 classDiagram
     class Apps {
-        +name : VARCHAR
-        +path : VARCHAR
-        +icon : BLOB
-        +tags : VARCHAR
+        name : VARCHAR
+        path : VARCHAR
+        icon : BLOB
+        tags : VARCHAR
+        options : VARCHAR
     }
 ```
 
