@@ -1,6 +1,5 @@
 from sqlite3 import *
 import io
-import sqlite3
 from PIL import Image, ImageTk
 
 def image_to_blob(image: Image.Image) -> bytes:

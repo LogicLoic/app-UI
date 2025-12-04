@@ -1,5 +1,5 @@
 from tkinter import *
-from math import *
+from math import exp
 from PIL import Image, ImageTk
 from IconLoader import extract_icon_from_exe as extract
 from tkinter import filedialog
