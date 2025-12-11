@@ -8,6 +8,7 @@ from appDetails import AppDetails
 from settings import open_settings, apply_settings
 import os
 import subprocess
+import sys
 
 def interpolate_color(color1, color2, t):
     c1 = [int(color1[i:i+2], 16) for i in (1, 3, 5)]
@@ -343,7 +344,7 @@ with open("settings.set", "r") as f:
 canvas = Canvas(root, bg="#002244")
 canvas.pack(fill=BOTH, expand=True)
 
-button1 = Button(root, text="Exit", command=lambda: exit())
+button1 = Button(root, text="Exit", command=lambda: sys.exit())
 button1.place(x=WIDTH - 44, y=18)
 
 button2 = Button(root, text="Add Executable", command=lambda: add_exe(conn, canvas, objects))

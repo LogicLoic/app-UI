@@ -6,6 +6,7 @@ from PIL import Image, ImageTk
 import subprocess
 from appDB import delete_application, update_tags, get_icon, get_tags, get_options, update_options
 import shlex
+import sys
 
 class AppDetails:
     def __init__(self, master, conn, app_name, app_path, refresh_callback, close_on_run, objects, settings):
@@ -109,7 +110,7 @@ class AppDetails:
             messagebox.showerror("Error", f"Impossible to launch : {e}")
         if self.close_on_run:
             self.master.quit()
-            exit()
+            sys.exit()
 
     def delete_app(self):
         """Deletes the application after confirmation."""
